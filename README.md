@@ -31,7 +31,7 @@
 ### 安装
 
 ```bash
-npm install -g @toobit_ai/toobit-trade-mcp @toobit_ai/toobit-trade-cli
+npm install -g toobit-trade-mcp toobit-trade-cli
 ```
 
 ### 配置凭证
@@ -198,9 +198,9 @@ toobit account balance
 ```
 agent-toobit-kit/
 ├── packages/
-│   ├── core/          # @agent-toobitkit/core — 共享库
-│   ├── mcp/           # @toobit_ai/toobit-trade-mcp — MCP 服务器
-│   └── cli/           # @toobit_ai/toobit-trade-cli — 命令行工具
+│   ├── core/          # 共享核心库
+│   ├── mcp/           # toobit-trade-mcp — MCP 服务器
+│   └── cli/           # toobit-trade-cli — 命令行工具
 ├── docs/
 │   └── landing/       # 介绍页面
 ├── config.toml.example
@@ -224,7 +224,7 @@ MIT License
 
 | 服务 | 状态 | 说明 |
 |------|------|------|
-| **npm 发布** | 🔜 待配置 | 需要 npm 组织 `@toobit_ai` 和发布权限 |
+| **npm 发布** | ✅ 已完成 | [toobit-trade-mcp](https://www.npmjs.com/package/toobit-trade-mcp) / [toobit-trade-cli](https://www.npmjs.com/package/toobit-trade-cli) |
 | **MCP 云端部署 (Remote MCP)** | 🔜 规划中 | 当前仅支持本地 stdio 模式 |
 | **Skills 协议** | 🔜 规划中 | `toobit-cex-market`、`toobit-cex-trade` 等独立 Skill 包 |
 | **WebSocket 实时数据** | 🔜 待开发 | 现货/合约 WebSocket 行情和用户数据流 |
