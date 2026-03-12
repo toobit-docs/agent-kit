@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toobit Agent Trade Kit — AI 驱动的智能交易</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --primary: #00f0ff;
+      --primary-dim: #00a8b3;
+      --secondary: #7b61ff;
+      --accent: #ff3d71;
+      --bg-dark: #0a0a1a;
+      --bg-card: #0f1029;
+      --bg-card-hover: #141438;
+      --text: #e8e8f0;
+      --text-dim: #8888aa;
+      --border: #1a1a3e;
+      --glow: 0 0 40px rgba(0, 240, 255, 0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-gradient {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 800px 600px at 20% 10%, rgba(0,240,255,0.08), transparent),
+        radial-gradient(ellipse 600px 400px at 80% 80%, rgba(123,97,255,0.06), transparent),
+        radial-gradient(ellipse 400px 300px at 50% 50%, rgba(255,61,113,0.04), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: float linear infinite;
+      opacity: 0;
+    }
+
+    @keyframes float {
+      0% { opacity: 0; transform: translateY(100vh) scale(0); }
+      10% { opacity: 0.6; }
+      90% { opacity: 0.6; }
+      100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(20px);
+      background: rgba(10,10,26,0.8);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--bg-dark);
+    }
+
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a { color: var(--text-dim); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s; }
+    .nav-links a:hover { color: var(--primary); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: var(--bg-dark);
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--glow); }
+
+    .btn-outline {
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.3s;
+      background: transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: rgba(0,240,255,0.05);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 32px;
+      animation: pulse-border 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { border-color: var(--border); }
+      50% { border-color: rgba(0,240,255,0.4); }
+    }
+
+    .badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    h1 {
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+      max-width: 900px;
+    }
+
+    h1 .gradient {
+      background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 640px;
+      margin-bottom: 40px;
+      line-height: 1.8;
+    }
+
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+    /* TERMINAL */
+    .terminal-wrap {
+      margin-top: 60px;
+      width: 100%;
+      max-width: 720px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--bg-card);
+      box-shadow: var(--glow);
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background: #ff5f57; }
+    .terminal-dot.yellow { background: #febc2e; }
+    .terminal-dot.green { background: #28c840; }
+
+    .terminal-title {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .terminal-body {
+      padding: 20px 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 2;
+      min-height: 200px;
+    }
+
+    .terminal-body .prompt { color: var(--primary); }
+    .terminal-body .command { color: var(--text); }
+    .terminal-body .output { color: var(--text-dim); }
+    .terminal-body .success { color: #28c840; }
+    .terminal-body .highlight { color: var(--secondary); }
+
+    .cursor-blink {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: var(--primary);
+      animation: cursor-blink 1s step-end infinite;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+
+    @keyframes cursor-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* SECTIONS */
+    section {
+      padding: 100px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .section-header h2 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+
+    .section-header p {
+      color: var(--text-dim);
+      font-size: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* TWO-MODE CARDS */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+
+    .mode-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      background: var(--bg-card);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mode-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .mode-card:hover { background: var(--bg-card-hover); transform: translateY(-4px); box-shadow: var(--glow); }
+    .mode-card:hover::before { opacity: 1; }
+
+    .mode-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    .mode-card p { color: var(--text-dim); font-size: 14px; line-height: 1.8; margin-bottom: 16px; }
+
+    .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--primary);
+      background: rgba(0,240,255,0.05);
+    }
+
+    /* TOOLS GRID */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .tool-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      background: var(--bg-card);
+      transition: all 0.3s;
+    }
+
+    .tool-card:hover { border-color: rgba(0,240,255,0.3); background: var(--bg-card-hover); }
+
+    .tool-card .tool-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+
+    .tool-card h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .tool-card p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+    .tool-card .tool-count { font-size: 12px; color: var(--primary); margin-top: 12px; font-weight: 600; }
+
+    /* SCENARIOS */
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+
+    .scenario-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      background: var(--bg-card);
+      transition: all 0.3s;
+    }
+
+    .scenario-card:hover { background: var(--bg-card-hover); }
+    .scenario-card h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--primary); }
+    .scenario-card .chat-bubble {
+      background: rgba(0,240,255,0.05);
+      border: 1px solid rgba(0,240,255,0.1);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-style: italic;
+      color: var(--text);
+      margin: 12px 0;
+    }
+    .scenario-card p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+    /* QUICK START */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+    }
+
+    .step {
+      position: relative;
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-card);
+    }
+
+    .step-number {
+      position: absolute;
+      top: -14px;
+      left: 24px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: var(--bg-dark);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .step h4 { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+
+    .code-block {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-x: auto;
+      color: var(--text);
+    }
+
+    .code-block .comment { color: #666; }
+
+    /* SECURITY */
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .security-item {
+      text-align: center;
+      padding: 28px 20px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-card);
+    }
+
+    .security-item .icon {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+
+    .security-item h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .security-item p { font-size: 13px; color: var(--text-dim); }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    footer a { color: var(--primary); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* INSTALL LINE */
+    .install-line {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .install-line .dollar { color: var(--primary); }
+
+    @media (max-width: 768px) {
+      nav { padding: 12px 16px; }
+      .nav-links { display: none; }
+      .hero { padding: 100px 16px 60px; }
+      section { padding: 60px 16px; }
+      .mode-grid, .tools-grid, .scenario-grid, .steps, .security-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-gradient"></div>
+  <div class="particles" id="particles"></div>
+
+  <div class="content">
+    <nav>
+      <div class="logo">
+        <div class="logo-icon">T</div>
+        <span>Toobit Agent Trade Kit</span>
+      </div>
+      <div class="nav-links">
+        <a href="#features">功能</a>
+        <a href="#tools">工具</a>
+        <a href="#scenarios">场景</a>
+        <a href="#quickstart">快速开始</a>
+        <a href="#security">安全</a>
+        <a href="https://github.com/toobit/agent-toobit-kit" class="btn-primary">GitHub</a>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="badge">
+        <span class="dot"></span>
+        开源 · MIT 协议 · 本地运行
+      </div>
+      <h1>凡你所思<br><span class="gradient">Agent 皆可为</span></h1>
+      <p>用自然语言在 Toobit 驱动交易，从行情发现到策略执行。<br>内置 MCP Server + CLI，完全开源且在本地运行，密钥绝不离开您的设备。</p>
+      <div class="hero-actions">
+        <a href="https://github.com/toobit/agent-toobit-kit" class="btn-primary">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          查看 GitHub
+        </a>
+        <a href="#quickstart" class="btn-outline">快速开始 →</a>
+      </div>
+      <div class="install-line">
+        <span class="dollar">$</span>
+        <span>npm install -g @toobit_ai/toobit-trade-mcp @toobit_ai/toobit-trade-cli</span>
+      </div>
+
+      <div class="terminal-wrap">
+        <div class="terminal-header">
+          <div class="terminal-dot red"></div>
+          <div class="terminal-dot yellow"></div>
+          <div class="terminal-dot green"></div>
+          <div class="terminal-title">toobit-trade-cli</div>
+        </div>
+        <div class="terminal-body" id="terminal">
+          <div><span class="prompt">$ </span><span class="command">toobit market ticker --symbol BTCUSDT</span></div>
+          <div class="output">&nbsp;&nbsp;BTCUSDT  $87,432.50  ▲ +2.34%  24h Vol: $18.7B</div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">&gt; </span><span class="command">市价买入 500 USDT 的 BTC</span></div>
+          <div class="output">&nbsp;&nbsp;Calling spot_place_order</div>
+          <div class="output">&nbsp;&nbsp;BUY BTCUSDT | 500 USDT | MARKET</div>
+          <div class="success">&nbsp;&nbsp;✓ Order filled — avgPx: $87,432.50</div>
+          <div>&nbsp;</div>
+          <div><span class="prompt">&gt; </span><span class="command">查看我的持仓</span></div>
+          <div class="output">&nbsp;&nbsp;Calling futures_get_positions</div>
+          <div class="highlight">&nbsp;&nbsp;BTCUSDT LONG | 0.5 BTC | +$1,240.50 (+3.2%)</div>
+          <div><span class="cursor-blink"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TWO MODES -->
+    <section id="features">
+      <div class="section-header">
+        <h2>两种交易方式</h2>
+        <p>同一强大引擎，连接方式由您定。</p>
+      </div>
+      <div class="mode-grid">
+        <div class="mode-card">
+          <h3>🤖 MCP 服务器</h3>
+          <p>通过 Claude、ChatGPT 或任何支持 MCP 的 AI 对话交互。只需说出需求，AI 即可为您构建策略并执行交易。</p>
+          <div class="tags">
+            <span class="tag">AI 原生</span>
+            <span class="tag">Claude / Cursor</span>
+            <span class="tag">实时行情</span>
+          </div>
+        </div>
+        <div class="mode-card">
+          <h3>⚡ CLI 命令行</h3>
+          <p>直接在终端完成交易。将行情数据接入脚本、设置定时任务，在您自己的开发环境中实现全自动化。</p>
+          <div class="tags">
+            <span class="tag">终端</span>
+            <span class="tag">Shell 管道</span>
+            <span class="tag">定时任务</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOOL MODULES -->
+    <section id="tools">
+      <div class="section-header">
+        <h2>全功能工具矩阵</h2>
+        <p>涵盖行情、现货、合约、账户管理，一句话构建任意交易策略。</p>
+      </div>
+      <div class="tools-grid">
+        <div class="tool-card">
+          <div class="tool-icon" style="background:rgba(0,240,255,0.1);">📊</div>
+          <h4>行情数据 (Market)</h4>
+          <p>实时行情、深度、K线、标记价、资金费率、持仓量、指数价格、多空比等。无需 API Key。</p>
+          <div class="tool-count">21 个工具 · 公开接口</div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon" style="background:rgba(123,97,255,0.1);">💰</div>
+          <h4>现货交易 (Spot)</h4>
+          <p>下单、撤单、批量操作、查询订单、成交历史。支持 LIMIT、MARKET、LIMIT_MAKER 订单类型。</p>
+          <div class="tool-count">10 个工具 · 需要 API Key</div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon" style="background:rgba(255,61,113,0.1);">📈</div>
+          <h4>USDT-M 合约 (Futures)</h4>
+          <p>下单、改单、平仓、杠杆、保证金模式、止盈止损、闪电平仓、一键反手、持仓管理。</p>
+          <div class="tool-count">25 个工具 · 需要 API Key</div>
+        </div>
+        <div class="tool-card">
+          <div class="tool-icon" style="background:rgba(40,200,64,0.1);">🏦</div>
+          <h4>账户管理 (Account)</h4>
+          <p>余额查询、充提记录、子账户管理、划转、流水、API Key 检查、审计日志。</p>
+          <div class="tool-count">10 个工具 · 需要 API Key</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENARIOS -->
+    <section id="scenarios">
+      <div class="section-header">
+        <h2>为全交易场景量身打造</h2>
+        <p>只需一句话，您可以构建任意交易策略。</p>
+      </div>
+      <div class="scenario-grid">
+        <div class="scenario-card">
+          <h4>📋 持仓健康检查</h4>
+          <div class="chat-bubble">"查看我的所有合约持仓和今日盈亏"</div>
+          <p>全面解析您的收益、手续费和风险敞口。让您瞬间对全盘资产了如指掌。</p>
+        </div>
+        <div class="scenario-card">
+          <h4>⚡ 资讯驱动型交易</h4>
+          <div class="chat-bubble">"立即市价买入 1,000 USD 的 BTC"</div>
+          <p>极速响应市场异动。AI 在几秒内为您完成交易，告别繁琐的切屏操作。</p>
+        </div>
+        <div class="scenario-card">
+          <h4>🛡️ 现货止盈止损</h4>
+          <div class="chat-bubble">"市价买入 500 USDT 的 ETH，跌到 3500 止损"</div>
+          <p>一句话搞定现货下单与止损。无需分别设置复杂的算法订单。</p>
+        </div>
+        <div class="scenario-card">
+          <h4>📊 合约杠杆交易</h4>
+          <div class="chat-bubble">"10 倍杠杆做多 BTCUSDT，数量 0.1 BTC"</div>
+          <p>设定杠杆与方向，AI 自动调整杠杆并下单。精准执行每一笔操作。</p>
+        </div>
+        <div class="scenario-card">
+          <h4>🔄 一键反手</h4>
+          <div class="chat-bubble">"把我的 BTCUSDT 多单反手做空"</div>
+          <p>市场突变时快速反转仓位方向，AI 自动平仓并反向开仓。</p>
+        </div>
+        <div class="scenario-card">
+          <h4>🗑️ 订单批量管理</h4>
+          <div class="chat-bubble">"撤销我所有 BTCUSDT 的当前委托"</div>
+          <p>一句话清空挂单。AI 自动获取所有未成交订单并批量撤销。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK START -->
+    <section id="quickstart">
+      <div class="section-header">
+        <h2>3 分钟快速开始</h2>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h4>安装</h4>
+          <div class="code-block">
+            npm install -g @toobit_ai/toobit-trade-mcp @toobit_ai/toobit-trade-cli
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h4>配置</h4>
+          <div class="code-block">
+            toobit config init<br><br>
+            <span class="comment"># 或手动创建 ~/.toobit/config.toml</span><br>
+            default_profile = "live"<br><br>
+            [profiles.live]<br>
+            api_key = "your-api-key"<br>
+            secret_key = "your-secret-key"
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h4>交易</h4>
+          <div class="code-block">
+            <span class="comment"># 连接 AI 客户端</span><br>
+            toobit-trade-mcp setup --client cursor<br><br>
+            <span class="comment"># 或直接在终端使用</span><br>
+            toobit market ticker --symbol BTCUSDT<br>
+            toobit spot place --symbol BTCUSDT \<br>
+            &nbsp;&nbsp;--side BUY --type MARKET --quantity 0.001
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECURITY -->
+    <section id="security">
+      <div class="section-header">
+        <h2>安全至上</h2>
+        <p>四层安全防护，让您安心使用 AI 交易。</p>
+      </div>
+      <div class="security-grid">
+        <div class="security-item">
+          <div class="icon">🔐</div>
+          <h4>本地运行</h4>
+          <p>所有程序在本地运行，密钥仅存本地配置文件，AI 无法获取凭证。</p>
+        </div>
+        <div class="security-item">
+          <div class="icon">👁️</div>
+          <h4>只读模式</h4>
+          <p>--read-only 模式下仅允许数据查询，禁止任何交易操作。</p>
+        </div>
+        <div class="security-item">
+          <div class="icon">🛡️</div>
+          <h4>模块权限</h4>
+          <p>精确控制 AI 可用功能，按需加载 market、spot、futures、account 模块。</p>
+        </div>
+        <div class="security-item">
+          <div class="icon">📝</div>
+          <h4>审计日志</h4>
+          <p>所有工具调用自动记录到本地日志，参数脱敏，随时可查。</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        Toobit Agent Trade Kit · 完全开源 · MIT License<br>
+        <a href="https://github.com/toobit/agent-toobit-kit">GitHub</a> ·
+        <a href="https://www.toobit.com">Toobit</a> ·
+        <a href="https://www.toobit.com/support/toobit-api-key-creation-guide">创建 API Key</a>
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDuration = (8 + Math.random() * 12) + 's';
+      p.style.animationDelay = Math.random() * 10 + 's';
+      p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+      container.appendChild(p);
+    }
+  </script>
+</body>
+</html>

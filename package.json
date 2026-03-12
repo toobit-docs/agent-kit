@@ -1,0 +1,23 @@
+{
+  "name": "toobit-hub",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @agent-toobitkit/core build && pnpm --filter @toobit_ai/toobit-trade-mcp build && pnpm --filter @toobit_ai/toobit-trade-cli build",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean",
+    "test": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=9"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}

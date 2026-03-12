@@ -1,0 +1,9 @@
+default_profile = "live"
+
+[profiles.live]
+api_key    = "your-api-key"
+secret_key = "your-secret-key"
+
+# [profiles.sub]
+# api_key    = "sub-account-api-key"
+# secret_key = "sub-account-secret-key"

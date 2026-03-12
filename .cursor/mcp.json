@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "toobit-trade": {
+      "command": "node",
+      "args": [
+        "/Users/date/Documents/w/agent-toobit-kit/packages/mcp/dist/index.js",
+        "--modules",
+        "all"
+      ],
+      "env": {
+        "RESTART_TS": "1773238500"
+      }
+    }
+  }
+}

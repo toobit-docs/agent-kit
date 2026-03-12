@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toobit Agent Trade Kit — 使用文档</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --primary: #00f0ff;
+      --primary-dim: #00a8b3;
+      --secondary: #7b61ff;
+      --accent: #ff3d71;
+      --bg-dark: #0a0a1a;
+      --bg-card: #0f1029;
+      --bg-card-hover: #141438;
+      --bg-code: #0c0c20;
+      --text: #e8e8f0;
+      --text-dim: #8888aa;
+      --border: #1a1a3e;
+      --border-bright: #2a2a5e;
+      --glow: 0 0 40px rgba(0, 240, 255, 0.15);
+      --sidebar-w: 280px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── Background ── */
+    .bg-grid {
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,240,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,240,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none; z-index: 0;
+    }
+    .bg-gradient {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 800px 600px at 20% 10%, rgba(0,240,255,0.06), transparent),
+        radial-gradient(ellipse 600px 400px at 80% 80%, rgba(123,97,255,0.04), transparent);
+    }
+
+    /* ── Top Header ── */
+    .top-header {
+      position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 100;
+      background: rgba(10,10,26,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 24px; gap: 16px;
+    }
+    .top-header .logo {
+      font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .top-header .logo span { color: var(--text-dim); font-weight: 400; margin-left: 8px; font-size: 13px; }
+    .top-header .nav-links { margin-left: auto; display: flex; gap: 20px; }
+    .top-header .nav-links a {
+      color: var(--text-dim); text-decoration: none; font-size: 13px; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .top-header .nav-links a:hover { color: var(--primary); }
+    .menu-toggle {
+      display: none; background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: fixed; top: 56px; left: 0; bottom: 0;
+      width: var(--sidebar-w); overflow-y: auto;
+      background: rgba(10,10,26,0.95); backdrop-filter: blur(8px);
+      border-right: 1px solid var(--border);
+      padding: 20px 0; z-index: 90;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .sidebar .nav-group { margin-bottom: 8px; }
+    .sidebar .nav-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--text-dim); padding: 12px 24px 6px; user-select: none;
+    }
+    .sidebar a {
+      display: block; padding: 6px 24px 6px 28px;
+      color: var(--text-dim); text-decoration: none; font-size: 13px; font-weight: 400;
+      border-left: 2px solid transparent; transition: all 0.15s;
+    }
+    .sidebar a:hover { color: var(--text); background: rgba(0,240,255,0.04); }
+    .sidebar a.active {
+      color: var(--primary); border-left-color: var(--primary);
+      background: rgba(0,240,255,0.06); font-weight: 500;
+    }
+    .sidebar a.sub { padding-left: 44px; font-size: 12.5px; }
+
+    /* ── Main Content ── */
+    .main {
+      margin-left: var(--sidebar-w); margin-top: 56px;
+      padding: 40px 48px 100px; max-width: 900px;
+      position: relative; z-index: 1;
+    }
+
+    h1 {
+      font-size: 32px; font-weight: 800; margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    h2 {
+      font-size: 22px; font-weight: 700; margin: 48px 0 16px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    h3 {
+      font-size: 17px; font-weight: 600; margin: 32px 0 12px; color: var(--text);
+    }
+    h4 {
+      font-size: 15px; font-weight: 600; margin: 24px 0 8px; color: var(--text-dim);
+    }
+
+    p { margin-bottom: 16px; color: var(--text); font-size: 14.5px; }
+    strong { color: var(--primary); font-weight: 600; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .lead {
+      font-size: 16px; color: var(--text-dim); line-height: 1.8; margin-bottom: 24px;
+    }
+
+    /* ── Code ── */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-code); border: 1px solid var(--border);
+      padding: 2px 6px; border-radius: 4px; font-size: 13px; color: var(--primary);
+    }
+    pre {
+      background: var(--bg-code); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px 20px; margin: 12px 0 20px; overflow-x: auto;
+      position: relative;
+    }
+    pre code {
+      background: none; border: none; padding: 0; color: var(--text);
+      font-size: 13px; line-height: 1.7;
+    }
+    pre .comment { color: #5c6370; }
+    pre .keyword { color: var(--secondary); }
+    pre .string { color: #98c379; }
+    pre .flag { color: var(--primary); }
+
+    /* ── Table ── */
+    table {
+      width: 100%; border-collapse: collapse; margin: 12px 0 24px;
+      font-size: 13.5px;
+    }
+    th {
+      text-align: left; padding: 10px 14px;
+      background: rgba(0,240,255,0.06); border: 1px solid var(--border);
+      color: var(--primary); font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    td {
+      padding: 9px 14px; border: 1px solid var(--border);
+      color: var(--text); vertical-align: top;
+    }
+    tr:hover td { background: rgba(0,240,255,0.02); }
+    td code { font-size: 12.5px; }
+
+    /* ── Callout ── */
+    .callout {
+      border-radius: 8px; padding: 16px 20px; margin: 16px 0 24px;
+      font-size: 13.5px; line-height: 1.7;
+    }
+    .callout-tip {
+      background: rgba(0,240,255,0.06); border-left: 3px solid var(--primary);
+    }
+    .callout-tip::before {
+      content: '💡 提示'; display: block; font-weight: 600; color: var(--primary);
+      margin-bottom: 6px; font-size: 13px;
+    }
+    .callout-warning {
+      background: rgba(255,180,0,0.08); border-left: 3px solid #ffb400;
+    }
+    .callout-warning::before {
+      content: '⚠️ 安全提示'; display: block; font-weight: 600; color: #ffb400;
+      margin-bottom: 6px; font-size: 13px;
+    }
+    .callout-danger {
+      background: rgba(255,61,113,0.08); border-left: 3px solid var(--accent);
+    }
+    .callout-danger::before {
+      content: '🔴 重要'; display: block; font-weight: 600; color: var(--accent);
+      margin-bottom: 6px; font-size: 13px;
+    }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    }
+    .badge-public { background: rgba(0,240,255,0.12); color: var(--primary); }
+    .badge-private { background: rgba(123,97,255,0.15); color: var(--secondary); }
+    .badge-write { background: rgba(255,61,113,0.12); color: var(--accent); }
+
+    /* ── Links row ── */
+    .links-row {
+      display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 32px;
+    }
+    .links-row a {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px;
+      border: 1px solid var(--border); font-size: 13px; font-weight: 500;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .links-row a:hover {
+      border-color: var(--primary); background: rgba(0,240,255,0.06);
+      text-decoration: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; padding: 32px 20px 80px; }
+      .menu-toggle { display: block; }
+      .top-header .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-gradient"></div>
+
+<!-- Top Header -->
+<header class="top-header">
+  <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a class="logo" href="../landing/">TOOBIT AGENT TRADE KIT <span>v1.0 文档</span></a>
+  <nav class="nav-links">
+    <a href="../landing/">首页</a>
+    <a href="https://github.com/nicejudy/agent-toobit-kit" target="_blank">GitHub</a>
+    <a href="https://www.npmjs.com/package/@toobit_ai/toobit-trade-mcp" target="_blank">npm</a>
+  </nav>
+</header>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="nav-group">
+    <div class="nav-title">简介</div>
+    <a href="#introduction" class="active">概述</a>
+    <a href="#features">支持哪些功能？</a>
+    <a href="#modes">三种使用方式</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">快速开始</div>
+    <a href="#install">第一步 — 安装</a>
+    <a href="#config">第二步 — 配置凭证</a>
+    <a href="#connect">第三步 — 连接 AI 客户端</a>
+    <a href="#tryit">第四步 — 试用</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">MCP 服务器</div>
+    <a href="#mcp-options">启动选项</a>
+    <a href="#tools">工具列表</a>
+    <a href="#tools-market" class="sub">market — 行情数据</a>
+    <a href="#tools-spot" class="sub">spot — 现货交易</a>
+    <a href="#tools-futures" class="sub">futures — USDT-M 合约</a>
+    <a href="#tools-account" class="sub">account — 账户管理</a>
+    <a href="#tools-system" class="sub">system — 系统</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">命令行</div>
+    <a href="#cli">CLI 使用</a>
+    <a href="#cli-examples">命令示例</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">安全</div>
+    <a href="#security">安全机制</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">其他</div>
+    <a href="#faq">常见问题</a>
+    <a href="#links">相关链接</a>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main class="main">
+
+<!-- ════════════════════════════════ 简介 ════════════════════════════════ -->
+<section id="introduction">
+<h1>简介</h1>
+<p class="lead">
+  Toobit Agent Trade Kit 将 AI 助手与您的 Toobit 交易账户直接连接。无需在 AI 和交易所之间来回切换，只需用自然语言描述您的需求，AI 即可自动执行。
+</p>
+<p>
+  它以<strong>本地进程</strong>的方式运行在您的设备上。您的 API Key 永远不会离开本地。完全开源，遵循 MIT 协议。
+</p>
+<p>
+  <strong>Toobit 官方 AI 智能交易工具包。</strong>让您的 AI Agent 通过自然语言，在 Toobit 上交易现货、USDT-M 永续合约等多种产品。
+</p>
+
+<div class="links-row">
+  <a href="https://github.com/nicejudy/agent-toobit-kit" target="_blank">📦 GitHub</a>
+  <a href="https://www.npmjs.com/package/@toobit_ai/toobit-trade-mcp" target="_blank">npm: toobit-trade-mcp</a>
+  <a href="https://www.npmjs.com/package/@toobit_ai/toobit-trade-cli" target="_blank">npm: toobit-trade-cli</a>
+</div>
+</section>
+
+<!-- ── 支持哪些功能 ── -->
+<section id="features">
+<h2>支持哪些功能？</h2>
+<table>
+  <tr><td><strong>1. 行情数据</strong></td><td>价格、订单簿、K线、资金费率、持仓量、标记价格、指数价格</td></tr>
+  <tr><td><strong>2. 现货交易</strong></td><td>下单、撤单、批量下单、批量撤单、查询订单与成交</td></tr>
+  <tr><td><strong>3. USDT-M 永续合约</strong></td><td>开多/开空、平仓、杠杆管理、保证金调整、止盈止损、闪电平仓、反向开仓</td></tr>
+  <tr><td><strong>4. 账户管理</strong></td><td>余额查询、资金流水、子账户管理、划转、充提记录、API Key 检查</td></tr>
+  <tr><td><strong>5. 审计日志</strong></td><td>本地工具调用记录，支持追踪与回溯</td></tr>
+</table>
+</section>
+
+<!-- ── 三种使用方式 ── -->
+<section id="modes">
+<h2>三种使用方式</h2>
+<table>
+  <tr>
+    <th style="width:200px">方式</th><th>说明</th>
+  </tr>
+  <tr>
+    <td><strong>MCP 服务器</strong><br><code>toobit-trade-mcp</code></td>
+    <td>接入 Claude、Cursor、VS Code 或任意支持 MCP 的 AI 客户端，让您的 Agent 通过自然语言调用 Toobit 交易工具。</td>
+  </tr>
+  <tr>
+    <td><strong>CLI 命令行</strong><br><code>toobit</code></td>
+    <td>在终端直接交易，支持管道、定时任务和脚本，无需 AI 客户端。</td>
+  </tr>
+  <tr>
+    <td><strong>Core SDK</strong><br><code>@agent-toobitkit/core</code></td>
+    <td>核心库，可直接在 Node.js 项目中导入使用，构建自定义交易工具或机器人。</td>
+  </tr>
+</table>
+</section>
+
+<!-- ════════════════════════════════ 快速开始 ════════════════════════════════ -->
+<section id="install">
+<h2>快速开始</h2>
+<h3>第一步 — 安装</h3>
+<pre><code>npm install -g @toobit_ai/toobit-trade-mcp @toobit_ai/toobit-trade-cli</code></pre>
+<p>验证安装：</p>
+<pre><code>toobit market ticker <span class="flag">--symbol</span> <span class="string">BTCUSDT</span></code></pre>
+
+<div class="callout callout-tip">行情数据可立即使用，无需 API Key。</div>
+</section>
+
+<section id="config">
+<h3>第二步 — 添加 Toobit API 凭证</h3>
+<p>创建配置文件 <code>~/.toobit/config.toml</code>：</p>
+<pre><code><span class="comment"># ~/.toobit/config.toml</span>
+default_profile = <span class="string">"live"</span>
+
+[profiles.live]
+api_key    = <span class="string">"your-api-key"</span>
+secret_key = <span class="string">"your-secret-key"</span>
+
+<span class="comment"># 子账户配置（可选）</span>
+<span class="comment"># [profiles.sub]</span>
+<span class="comment"># api_key    = "sub-account-api-key"</span>
+<span class="comment"># secret_key = "sub-account-secret-key"</span></code></pre>
+
+<p><strong>获取 API Key：</strong>登录 <a href="https://www.toobit.com" target="_blank">toobit.com</a> → 设置 → API 密钥 → 创建新 API Key</p>
+
+<div class="callout callout-warning">
+  切勿将您的 API Key 或 Secret Key 粘贴到 AI 对话框中。所有凭证应仅保存在本地配置文件中。建议使用<strong>子账户的 API Key</strong>并仅开启所需的最小权限。
+</div>
+</section>
+
+<section id="connect">
+<h3>第三步 — 连接 AI 客户端</h3>
+<p>在项目根目录创建 <code>.cursor/mcp.json</code>（以 Cursor 为例）：</p>
+<pre><code>{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"toobit-trade"</span>: {
+      <span class="string">"command"</span>: <span class="string">"toobit-trade-mcp"</span>,
+      <span class="string">"args"</span>: [<span class="string">"--modules"</span>, <span class="string">"all"</span>]
+    }
+  }
+}</code></pre>
+
+<p>支持的 AI 客户端：</p>
+<table>
+  <tr><th>客户端</th><th>配置方式</th></tr>
+  <tr><td>Cursor</td><td><code>.cursor/mcp.json</code></td></tr>
+  <tr><td>Claude Desktop</td><td><code>claude_desktop_config.json</code></td></tr>
+  <tr><td>VS Code (Copilot)</td><td><code>.vscode/mcp.json</code></td></tr>
+  <tr><td>Windsurf</td><td><code>~/.codeium/windsurf/mcp_config.json</code></td></tr>
+  <tr><td>Claude Code</td><td><code>claude-code mcp add</code></td></tr>
+</table>
+</section>
+
+<section id="tryit">
+<h3>第四步 — 试用</h3>
+<p>打开您的 AI 客户端，输入自然语言：</p>
+<pre><code><span class="comment"># 查询行情</span>
+BTC 现在的价格是多少？
+
+<span class="comment"># 查看账户</span>
+查看我的现货账户余额
+
+<span class="comment"># 合约操作</span>
+帮我查一下 ETH 合约的资金费率
+
+<span class="comment"># 深度分析</span>
+查看 BTC 的盘口深度，分析买卖压力</code></pre>
+</section>
+
+<!-- ════════════════════════════════ MCP ════════════════════════════════ -->
+<section id="mcp-options">
+<h2>MCP 服务器</h2>
+<h3>启动选项</h3>
+<table>
+  <tr><th>使用场景</th><th>命令</th></tr>
+  <tr><td>仅行情数据（无需 Key）</td><td><code>toobit-trade-mcp --modules market</code></td></tr>
+  <tr><td>全功能</td><td><code>toobit-trade-mcp --modules all</code></td></tr>
+  <tr><td>只读监控</td><td><code>toobit-trade-mcp --read-only</code></td></tr>
+  <tr><td>仅现货</td><td><code>toobit-trade-mcp --modules market,spot</code></td></tr>
+  <tr><td>仅合约</td><td><code>toobit-trade-mcp --modules market,futures</code></td></tr>
+  <tr><td>指定 Profile</td><td><code>toobit-trade-mcp --profile sub --modules all</code></td></tr>
+  <tr><td>禁用日志</td><td><code>toobit-trade-mcp --modules all --no-log</code></td></tr>
+</table>
+</section>
+
+<section id="tools">
+<h3>工具列表</h3>
+<p><code>market</code> 模块无需 API Key。其他模块均需要<strong>读取</strong>权限；写入操作还需额外开启<strong>交易</strong>权限。</p>
+</section>
+
+<section id="tools-market">
+<h4>market — 行情数据 <span class="badge badge-public">公开</span></h4>
+<table>
+  <tr><th>工具</th><th>说明</th></tr>
+  <tr><td><code>market_get_server_time</code></td><td>获取 Toobit 服务器时间</td></tr>
+  <tr><td><code>market_get_exchange_info</code></td><td>交易规则与交易对信息</td></tr>
+  <tr><td><code>market_get_depth</code></td><td>盘口深度</td></tr>
+  <tr><td><code>market_get_merged_depth</code></td><td>合并盘口深度</td></tr>
+  <tr><td><code>market_get_trades</code></td><td>最新成交记录</td></tr>
+  <tr><td><code>market_get_klines</code></td><td>K线（OHLCV）数据</td></tr>
+  <tr><td><code>market_get_ticker_24hr</code></td><td>24h 价格变动统计</td></tr>
+  <tr><td><code>market_get_ticker_price</code></td><td>最新价格</td></tr>
+  <tr><td><code>market_get_book_ticker</code></td><td>最优挂单价格</td></tr>
+  <tr><td><code>market_get_index_klines</code></td><td>指数 K 线</td></tr>
+  <tr><td><code>market_get_mark_price</code></td><td>标记价格</td></tr>
+  <tr><td><code>market_get_mark_price_klines</code></td><td>标记价格 K 线</td></tr>
+  <tr><td><code>market_get_funding_rate</code></td><td>当前资金费率</td></tr>
+  <tr><td><code>market_get_funding_rate_history</code></td><td>历史资金费率</td></tr>
+  <tr><td><code>market_get_open_interest</code></td><td>持仓量</td></tr>
+  <tr><td><code>market_get_long_short_ratio</code></td><td>多空比</td></tr>
+  <tr><td><code>market_get_contract_ticker_24hr</code></td><td>合约 24h 行情</td></tr>
+  <tr><td><code>market_get_contract_ticker_price</code></td><td>合约最新价格</td></tr>
+  <tr><td><code>market_get_index_price</code></td><td>指数价格</td></tr>
+  <tr><td><code>market_get_insurance_fund</code></td><td>保险基金余额</td></tr>
+  <tr><td><code>market_get_risk_limits</code></td><td>风险限额配置</td></tr>
+</table>
+</section>
+
+<section id="tools-spot">
+<h4>spot — 现货交易 <span class="badge badge-private">需鉴权</span></h4>
+<table>
+  <tr><th>工具</th><th>说明</th><th>类型</th></tr>
+  <tr><td><code>spot_place_order</code></td><td>下现货单（LIMIT / MARKET / LIMIT_MAKER）</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>spot_place_order_test</code></td><td>模拟下单测试（不实际提交）</td><td>读取</td></tr>
+  <tr><td><code>spot_batch_orders</code></td><td>批量下单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>spot_cancel_order</code></td><td>撤销订单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>spot_cancel_open_orders</code></td><td>撤销全部挂单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>spot_cancel_order_by_ids</code></td><td>按 ID 批量撤单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>spot_get_order</code></td><td>查询单笔订单</td><td>读取</td></tr>
+  <tr><td><code>spot_get_open_orders</code></td><td>查询当前挂单</td><td>读取</td></tr>
+  <tr><td><code>spot_get_trade_orders</code></td><td>查询历史订单</td><td>读取</td></tr>
+  <tr><td><code>spot_get_fills</code></td><td>查询成交记录</td><td>读取</td></tr>
+</table>
+</section>
+
+<section id="tools-futures">
+<h4>futures — USDT-M 永续合约 <span class="badge badge-private">需鉴权</span></h4>
+<table>
+  <tr><th>工具</th><th>说明</th><th>类型</th></tr>
+  <tr><td><code>futures_place_order</code></td><td>开仓 / 平仓（BUY_OPEN / SELL_CLOSE 等）</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_batch_orders</code></td><td>批量下单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_cancel_order</code></td><td>撤销订单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_cancel_all_orders</code></td><td>撤销全部订单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_cancel_order_by_ids</code></td><td>按 ID 批量撤单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_amend_order</code></td><td>修改订单</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_get_order</code></td><td>查询单笔订单</td><td>读取</td></tr>
+  <tr><td><code>futures_get_open_orders</code></td><td>查询当前挂单</td><td>读取</td></tr>
+  <tr><td><code>futures_get_history_orders</code></td><td>查询历史订单</td><td>读取</td></tr>
+  <tr><td><code>futures_get_positions</code></td><td>查询当前持仓</td><td>读取</td></tr>
+  <tr><td><code>futures_get_history_positions</code></td><td>查询历史持仓</td><td>读取</td></tr>
+  <tr><td><code>futures_set_leverage</code></td><td>设置杠杆倍数</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_get_leverage</code></td><td>查询杠杆设置</td><td>读取</td></tr>
+  <tr><td><code>futures_set_margin_type</code></td><td>切换逐仓 / 全仓</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_adjust_margin</code></td><td>调整保证金</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_set_trading_stop</code></td><td>设置止盈止损</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_flash_close</code></td><td>闪电平仓</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_reverse_position</code></td><td>反向开仓</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_auto_add_margin</code></td><td>自动追加保证金</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>futures_get_fills</code></td><td>查询成交记录</td><td>读取</td></tr>
+  <tr><td><code>futures_get_balance</code></td><td>查询合约余额</td><td>读取</td></tr>
+  <tr><td><code>futures_get_balance_flow</code></td><td>查询资金流水</td><td>读取</td></tr>
+  <tr><td><code>futures_get_commission_rate</code></td><td>查询手续费率</td><td>读取</td></tr>
+  <tr><td><code>futures_get_today_pnl</code></td><td>查询今日盈亏</td><td>读取</td></tr>
+</table>
+</section>
+
+<section id="tools-account">
+<h4>account — 账户管理 <span class="badge badge-private">需鉴权</span></h4>
+<table>
+  <tr><th>工具</th><th>说明</th><th>类型</th></tr>
+  <tr><td><code>account_get_info</code></td><td>查询现货账户余额</td><td>读取</td></tr>
+  <tr><td><code>account_get_balance_flow</code></td><td>查询资金流水</td><td>读取</td></tr>
+  <tr><td><code>account_get_sub_accounts</code></td><td>查询子账户列表</td><td>读取</td></tr>
+  <tr><td><code>account_sub_transfer</code></td><td>母子账户划转</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>account_check_api_key</code></td><td>验证 API Key 信息</td><td>读取</td></tr>
+  <tr><td><code>account_withdraw</code></td><td>提币</td><td><span class="badge badge-write">写入</span></td></tr>
+  <tr><td><code>account_get_deposit_address</code></td><td>查询充值地址</td><td>读取</td></tr>
+  <tr><td><code>account_get_deposit_orders</code></td><td>查询充值记录</td><td>读取</td></tr>
+  <tr><td><code>account_get_withdraw_orders</code></td><td>查询提币记录</td><td>读取</td></tr>
+  <tr><td><code>trade_get_history</code></td><td>查询本地审计日志</td><td>读取</td></tr>
+</table>
+</section>
+
+<section id="tools-system">
+<h4>system — 系统</h4>
+<table>
+  <tr><th>工具</th><th>说明</th></tr>
+  <tr><td><code>system_get_capabilities</code></td><td>返回服务器能力快照（模块可用性、鉴权状态、只读模式等）</td></tr>
+</table>
+</section>
+
+<!-- ════════════════════════════════ CLI ════════════════════════════════ -->
+<section id="cli">
+<h2>命令行</h2>
+<p>命令行工具是独立的终端工具，无需 AI 客户端。安装后即可通过 <code>toobit</code> 命令使用。</p>
+</section>
+
+<section id="cli-examples">
+<h3>命令示例</h3>
+<pre><code><span class="comment"># ── 行情数据 ──</span>
+toobit market ticker <span class="flag">--symbol</span> <span class="string">BTCUSDT</span>
+toobit market ticker-24hr <span class="flag">--symbol</span> <span class="string">ETHUSDT</span>
+toobit market candles <span class="flag">--symbol</span> <span class="string">BTCUSDT</span> <span class="flag">--interval</span> <span class="string">1h</span> <span class="flag">--limit</span> <span class="string">10</span>
+toobit market depth <span class="flag">--symbol</span> <span class="string">BTCUSDT</span> <span class="flag">--limit</span> <span class="string">5</span>
+toobit market funding-rate <span class="flag">--symbol</span> <span class="string">BTC-SWAP-USDT</span>
+
+<span class="comment"># ── 现货交易 ──</span>
+toobit spot place <span class="flag">--symbol</span> <span class="string">BTCUSDT</span> <span class="flag">--side</span> <span class="string">BUY</span> <span class="flag">--type</span> <span class="string">MARKET</span> <span class="flag">--quantity</span> <span class="string">0.001</span>
+toobit spot place <span class="flag">--symbol</span> <span class="string">DOGEUSDT</span> <span class="flag">--side</span> <span class="string">BUY</span> <span class="flag">--type</span> <span class="string">LIMIT</span> <span class="flag">--quantity</span> <span class="string">100</span> <span class="flag">--price</span> <span class="string">0.08</span>
+toobit spot open-orders
+toobit spot cancel <span class="flag">--orderId</span> <span class="string">123456789</span>
+
+<span class="comment"># ── 合约交易 ──</span>
+toobit futures place <span class="flag">--symbol</span> <span class="string">BTC-SWAP-USDT</span> <span class="flag">--side</span> <span class="string">BUY_OPEN</span> <span class="flag">--type</span> <span class="string">MARKET</span> <span class="flag">--quantity</span> <span class="string">1</span>
+toobit futures positions
+toobit futures leverage <span class="flag">--symbol</span> <span class="string">BTC-SWAP-USDT</span>
+
+<span class="comment"># ── 账户 ──</span>
+toobit account info
+toobit account balance-flow
+
+<span class="comment"># ── 管道与脚本 ──</span>
+toobit market ticker <span class="flag">--symbol</span> <span class="string">BTCUSDT</span> <span class="flag">--json</span> | jq '.data'
+toobit market candles <span class="flag">--symbol</span> <span class="string">BTCUSDT</span> <span class="flag">--interval</span> <span class="string">1h</span> <span class="flag">--limit</span> <span class="string">200</span> <span class="flag">--json</span> | python3 analyze.py</code></pre>
+</section>
+
+<!-- ════════════════════════════════ 安全 ════════════════════════════════ -->
+<section id="security">
+<h2>安全</h2>
+<p>Toobit Agent Trade Kit 提供多层安全防护：</p>
+<table>
+  <tr><th style="width:180px">安全层</th><th>说明</th></tr>
+  <tr><td><strong>只读模式</strong><br><code>--read-only</code></td><td>仅允许数据查询，所有写入工具被禁用，AI 无法执行任何交易操作。</td></tr>
+  <tr><td><strong>模块过滤</strong><br><code>--modules</code></td><td>精确控制暴露给 AI 的功能模块。例如 <code>--modules market</code> 仅暴露行情数据。</td></tr>
+  <tr><td><strong>智能注册</strong></td><td>服务器启动时检测 API Key 权限。如果 Key 不具备交易权限，下单工具不会注册。</td></tr>
+  <tr><td><strong>风险标签</strong></td><td>所有涉及资金操作的工具均标记为 <code>[CAUTION]</code>，提示 AI 在执行前确认。</td></tr>
+  <tr><td><strong>本地限流</strong></td><td>内置令牌桶限流算法，防止对 Toobit API 造成过载。</td></tr>
+  <tr><td><strong>审计日志</strong></td><td>所有工具调用自动记录到 <code>~/.toobit/logs/</code>，敏感数据（签名等）自动脱敏。</td></tr>
+  <tr><td><strong>本地运行</strong></td><td>所有程序在本地运行，签名在本地完成，凭证永远不会发送到第三方。</td></tr>
+</table>
+
+<div class="callout callout-danger">
+  <strong>凭证安全：</strong>切勿将您的 API Key 或 Secret Key 透露给任何 AI 模型或粘贴到对话框中。所有凭证应仅保存在本地配置文件（<code>~/.toobit/config.toml</code>）中。强烈建议使用<strong>子账户的 API Key</strong> 并仅开启所需的最小权限。
+</div>
+</section>
+
+<!-- ════════════════════════════════ FAQ ════════════════════════════════ -->
+<section id="faq">
+<h2>常见问题</h2>
+
+<h3>Agent Trade Kit 能做什么？</h3>
+<p>它覆盖了 Toobit 的核心交易功能：查询行情、交易现货和 USDT-M 永续合约、管理账户和资金。这一切都可以通过自然语言（MCP）或命令行完成。</p>
+
+<h3>支持哪些 AI 客户端？</h3>
+<p>支持所有兼容 MCP（Model Context Protocol）协议的 AI 客户端，包括 Claude Desktop、Claude Code、Cursor、VS Code 以及各类自定义 Agent。</p>
+
+<h3>这个工具是免费的吗？</h3>
+<p>是的。Agent Trade Kit 基于 MIT 协议完全开源且免费。你只需要一个 Toobit 账户和 API Key 即可进行交易（如果仅查询行情数据，甚至不需要 API Key）。</p>
+
+<h3>我的 API Key 安全吗？</h3>
+<p>所有程序都在本地运行。您的密钥仅保存在本地配置文件中，签名过程完全在本地完成，AI 永远无法获取您的敏感凭证。除 Toobit 官方服务器外，没有任何数据会被发送到第三方。代码完全开源，欢迎随时查看。</p>
+
+<h3>如果 AI 犯错，我会损失资金吗？</h3>
+<p>我们内置了多层安全机制。您可使用 <code>--read-only</code> 模式限制 AI 仅查询数据。AI 可能会犯错，请在执行前独立核对所有订单信息。<strong>用户需自行承担交易带来的损失。</strong></p>
+
+<h3>现货交易对的 symbol 格式是什么？</h3>
+<p>现货使用 <code>BTCUSDT</code>、<code>ETHUSDT</code> 格式。合约使用 <code>BTC-SWAP-USDT</code>、<code>ETH-SWAP-USDT</code> 格式。</p>
+
+<h3>最小下单金额是多少？</h3>
+<p>取决于交易对。可以通过 <code>market_get_exchange_info</code> 工具查询具体的 <code>MIN_NOTIONAL</code>（最小名义金额）和 <code>LOT_SIZE</code>（最小/最大数量、步进）。大多数交易对的最小下单金额为 5 USDT。</p>
+</section>
+
+<!-- ════════════════════════════════ Links ════════════════════════════════ -->
+<section id="links">
+<h2>相关链接</h2>
+<div class="links-row">
+  <a href="https://github.com/nicejudy/agent-toobit-kit" target="_blank">📦 GitHub 仓库</a>
+  <a href="https://www.npmjs.com/package/@toobit_ai/toobit-trade-mcp" target="_blank">npm: toobit-trade-mcp</a>
+  <a href="https://www.npmjs.com/package/@toobit_ai/toobit-trade-cli" target="_blank">npm: toobit-trade-cli</a>
+  <a href="https://api-doc.toobit.com" target="_blank">📖 Toobit API 文档</a>
+  <a href="https://www.toobit.com" target="_blank">🌐 Toobit 官网</a>
+</div>
+</section>
+
+</main>
+
+<!-- Sidebar scroll highlight -->
+<script>
+const links = document.querySelectorAll('.sidebar a[href^="#"]');
+const sections = [...links].map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+
+function updateActive() {
+  let current = '';
+  for (const s of sections) {
+    if (s.getBoundingClientRect().top <= 100) current = s.id;
+  }
+  links.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', updateActive, { passive: true });
+updateActive();
+
+document.querySelectorAll('.sidebar a').forEach(a => {
+  a.addEventListener('click', () => {
+    document.querySelector('.sidebar').classList.remove('open');
+  });
+});
+</script>
+
+</body>
+</html>
