@@ -1,4 +1,4 @@
-import type { ToolRunner } from "@agent-toobitkit/core";
+import type { ToolRunner } from "@toobit_agent/agent-toobitkit-core";
 import type { CliParsed } from "../parser.js";
 import { formatJson } from "../formatter.js";
 

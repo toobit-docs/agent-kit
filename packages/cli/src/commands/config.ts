@@ -3,7 +3,7 @@ import {
   configFilePath,
   readFullConfig,
   writeFullConfig,
-} from "@agent-toobitkit/core";
+} from "@toobit_agent/agent-toobitkit-core";
 import type { CliParsed } from "../parser.js";
 
 function prompt(question: string): Promise<string> {

@@ -4,7 +4,7 @@ import {
   createToolRunner,
   toToolErrorPayload,
   configFilePath,
-} from "@agent-toobitkit/core";
+} from "@toobit_agent/agent-toobitkit-core";
 import { parseCli } from "./parser.js";
 import { handleMarketCommand } from "./commands/market.js";
 import { handleSpotCommand } from "./commands/spot.js";

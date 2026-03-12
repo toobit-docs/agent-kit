@@ -12,9 +12,9 @@ import {
   ToobitApiError,
   toToolErrorPayload,
   toMcpTool,
-} from "@agent-toobitkit/core";
-import type { ToobitConfig, ModuleId, ToolSpec } from "@agent-toobitkit/core";
-import type { TradeLogger } from "@agent-toobitkit/core";
+} from "@toobit_agent/agent-toobitkit-core";
+import type { ToobitConfig, ModuleId, ToolSpec } from "@toobit_agent/agent-toobitkit-core";
+import type { TradeLogger } from "@toobit_agent/agent-toobitkit-core";
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
 
 const SYSTEM_CAPABILITIES_TOOL_NAME = "system_get_capabilities";

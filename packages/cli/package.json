@@ -1,6 +1,6 @@
 {
-  "name": "@toobit_ai/toobit-trade-cli",
-  "version": "1.0.0",
+  "name": "toobit-trade-cli",
+  "version": "1.0.1",
   "type": "module",
   "bin": {
     "toobit": "dist/index.js"
@@ -19,10 +19,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@agent-toobitkit/core": "workspace:*",
     "smol-toml": "^1.3.0"
   },
   "devDependencies": {
+    "@toobit_agent/agent-toobitkit-core": "workspace:*",
     "@types/node": "^22.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0"

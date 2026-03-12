@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @agent-toobitkit/core build && pnpm --filter @toobit_ai/toobit-trade-mcp build && pnpm --filter @toobit_ai/toobit-trade-cli build",
+    "build": "pnpm --filter @toobit_agent/agent-toobitkit-core build && pnpm --filter toobit-trade-mcp build && pnpm --filter toobit-trade-cli build",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean",
     "test": "pnpm -r test"

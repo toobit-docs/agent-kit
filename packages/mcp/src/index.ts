@@ -8,8 +8,8 @@ import {
   printSetupUsage,
   SUPPORTED_CLIENTS,
   configFilePath,
-} from "@agent-toobitkit/core";
-import type { LogLevel, ClientId } from "@agent-toobitkit/core";
+} from "@toobit_agent/agent-toobitkit-core";
+import type { LogLevel, ClientId } from "@toobit_agent/agent-toobitkit-core";
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
 import { createServer } from "./server.js";
 

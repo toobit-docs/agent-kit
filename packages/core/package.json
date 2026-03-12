@@ -1,5 +1,5 @@
 {
-  "name": "@agent-toobitkit/core",
+  "name": "@toobit_agent/agent-toobitkit-core",
   "version": "1.0.0",
   "type": "module",
   "exports": {
