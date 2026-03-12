@@ -50,7 +50,7 @@ api_key    = "your-api-key"
 secret_key = "your-secret-key"
 ```
 
-**获取 API Key：** [Toobit API Key 创建指南](https://www.toobit.com/support/toobit-api-key-creation-guide)
+**获取 API Key：** [Toobit API Key 创建指南](https://www.toobit.com/en-US/support/toobit-api-key-creation-guide)
 
 ### 连接 AI 客户端
 
