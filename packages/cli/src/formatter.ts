@@ -1,3 +1,14 @@
+function extractRows(value: unknown): unknown[] | null {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "object" && value !== null) {
+    const entries = Object.values(value as Record<string, unknown>);
+    for (const v of entries) {
+      if (Array.isArray(v)) return v;
+    }
+  }
+  return null;
+}
+
 export function formatJson(data: unknown, json: boolean): string {
   if (json) return JSON.stringify(data, null, 2);
   if (data === null || data === undefined) return "No data.";
@@ -6,12 +17,13 @@ export function formatJson(data: unknown, json: boolean): string {
   const record = data as Record<string, unknown>;
   const inner = record.data ?? record;
 
-  if (Array.isArray(inner)) {
-    if (inner.length === 0) return "No data.";
-    if (typeof inner[0] === "object" && inner[0] !== null) {
-      return formatTable(inner as Record<string, unknown>[]);
+  const rows = extractRows(inner);
+  if (rows) {
+    if (rows.length === 0) return "No data.";
+    if (typeof rows[0] === "object" && rows[0] !== null) {
+      return formatTable(rows as Record<string, unknown>[]);
     }
-    return inner.map(String).join("\n");
+    return rows.map(String).join("\n");
   }
 
   if (typeof inner === "object" && inner !== null) {
@@ -25,7 +37,10 @@ export function formatKv(data: Record<string, unknown>): string {
   const entries = Object.entries(data).filter(([, v]) => v !== undefined && v !== null);
   if (entries.length === 0) return "No data.";
   const maxKey = Math.max(...entries.map(([k]) => k.length));
-  return entries.map(([k, v]) => `${k.padEnd(maxKey)}  ${String(v)}`).join("\n");
+  return entries.map(([k, v]) => {
+    if (typeof v === "object") return `${k.padEnd(maxKey)}  ${JSON.stringify(v)}`;
+    return `${k.padEnd(maxKey)}  ${String(v)}`;
+  }).join("\n");
 }
 
 export function formatTable(rows: Record<string, unknown>[], columns?: string[]): string {
