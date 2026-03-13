@@ -4,8 +4,6 @@
 
 Trade with natural language — from market queries to order execution. Built-in MCP Server + CLI, fully open-source, runs locally, your keys never leave your device.
 
-[中文文档](#中文文档)
-
 ## Features
 
 | Module | Capabilities | Tools |
@@ -255,93 +253,3 @@ MIT License
 | **CI/CD** | 🔜 Planned | GitHub Actions |
 | **Demo trading** | ❌ N/A | Toobit API does not support demo trading |
 | **Options** | ❌ N/A | Toobit does not offer options trading |
-
----
-
-# 中文文档
-
-**让 AI 代理在 Toobit 上执行交易的官方工具包。**
-
-用自然语言驱动交易——从行情查询到下单执行。内置 MCP Server + CLI，完全开源，本地运行，密钥绝不离开您的设备。
-
-## 支持的功能
-
-| 模块 | 功能 | 工具数 |
-|------|------|--------|
-| **Market** | 实时行情、深度、K线、标记价、资金费率、持仓量、指数 | 21 |
-| **Spot** | 下单、撤单、批量操作、查询订单、成交历史 | 10 |
-| **Futures** | USDT-M 合约、杠杆、平仓、止盈止损、闪电平仓、反手 | 25 |
-| **Account** | 余额、充提、子账户、划转、流水、API Key 检查 | 10 |
-
-**总计：66+ 个 MCP 工具**
-
-## 使用方式
-
-### 1. MCP 服务器 (`toobit-trade-mcp`)
-接入 Claude、Cursor、VS Code 或任何支持 MCP 的 AI 客户端。
-
-### 2. CLI (`toobit-trade-cli`)
-在终端直接交易，支持管道、定时任务和脚本。
-
-### 3. Skills
-即插即用模块，适用于支持 Skills 协议的 AI 客户端。详见 [agent-skills](https://github.com/toobit-docs/agent-skills)。
-
-## 快速开始
-
-### 安装
-
-```bash
-npm install -g toobit-trade-mcp toobit-trade-cli
-```
-
-### 配置凭证
-
-```bash
-toobit config init
-```
-
-或手动创建 `~/.toobit/config.toml`：
-
-```toml
-default_profile = "live"
-
-[profiles.live]
-api_key    = "your-api-key"
-secret_key = "your-secret-key"
-```
-
-**获取 API Key：** [Toobit API Key 创建指南](https://www.toobit.com/en-US/support/toobit-api-key-creation-guide)
-
-### 连接 AI 客户端
-
-```bash
-toobit-trade-mcp setup --client <client>
-```
-
-| 客户端 | `<client>` 值 |
-|--------|---------------|
-| Claude Desktop | `claude-desktop` |
-| Claude Code | `claude-code` |
-| Cursor | `cursor` |
-| VS Code | `vscode` |
-| Windsurf | `windsurf` |
-
-## Symbol 格式
-
-Toobit 的现货和合约使用不同的 symbol 格式：
-
-| 类型 | 格式 | 示例 |
-|------|------|------|
-| 现货 | `BASEUSDT` | `BTCUSDT`、`ETHUSDT` |
-| 合约 | `BASE-SWAP-USDT` | `BTC-SWAP-USDT`、`ETH-SWAP-USDT` |
-
-> **重要：** 合约接口（资金费率、标记价、持仓量等）必须使用合约 symbol 格式 `BTC-SWAP-USDT`。使用现货格式 `BTCUSDT` 会返回空数据或报错。
-
-## 安全
-
-1. **本地运行** — 密钥仅存本地 `~/.toobit/config.toml`，签名在本地完成
-2. **只读模式** (`--read-only`) — 仅允许数据查询
-3. **模块控制** (`--modules`) — 按需加载功能模块
-4. **审计日志** — 所有调用记录到 `~/.toobit/logs/`，参数自动脱敏
-
-> **安全提示：** 切勿将 API Key 或 Secret Key 粘贴到 AI 对话框中。建议使用子账户 API Key 并仅开启所需权限。
