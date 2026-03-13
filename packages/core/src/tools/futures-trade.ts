@@ -11,38 +11,48 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_place_order",
       module: "futures",
-      description: "Place a USDT-M futures order. [CAUTION] Executes real trades. Private endpoint. Rate limit: 20 req/s.",
+      description: "Place a USDT-M futures order. For market orders, set orderType to MARKET — the handler automatically converts to type=LIMIT + priceType=MARKET as required by Toobit API. [CAUTION] Executes real trades. Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           side: { type: "string", enum: ["BUY_OPEN", "SELL_OPEN", "BUY_CLOSE", "SELL_CLOSE"] },
-          orderType: { type: "string", enum: ["LIMIT", "MARKET"], description: "Order type" },
+          orderType: { type: "string", enum: ["LIMIT", "MARKET", "STOP"], description: "LIMIT=limit order, MARKET=market order (auto-converted), STOP=conditional order" },
           quantity: { type: "string", description: "Order quantity (contracts)" },
-          price: { type: "string", description: "Required for LIMIT" },
+          price: { type: "string", description: "Required for LIMIT orders with priceType=INPUT" },
           leverage: { type: "string", description: "Leverage, e.g. 10" },
-          clientOrderId: { type: "string" },
-          priceType: { type: "string", enum: ["INPUT", "OPPONENT", "QUEUE", "OVER", "MARKET"], description: "Price type for trigger orders" },
-          triggerPrice: { type: "string", description: "Trigger price for conditional orders" },
-          timeInForce: { type: "string", enum: ["GTC", "IOC", "FOK", "LIMIT_MAKER"] },
+          newClientOrderId: { type: "string", description: "Unique client order ID. Auto-generated if omitted." },
+          priceType: { type: "string", enum: ["INPUT", "OPPONENT", "QUEUE", "OVER", "MARKET"], description: "Price type. INPUT=specified price, MARKET=market price" },
+          stopPrice: { type: "string", description: "Trigger price for STOP orders" },
+          timeInForce: { type: "string", enum: ["GTC", "IOC", "FOK"] },
         },
         required: ["symbol", "side", "orderType", "quantity"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
+        let orderType = requireString(args, "orderType");
+        let priceType = readString(args, "priceType");
+
+        if (orderType === "MARKET") {
+          orderType = "LIMIT";
+          priceType = "MARKET";
+        }
+
+        const clientId = readString(args, "newClientOrderId") ?? `mcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
         const response = await context.client.privatePost(
           "/api/v1/futures/order",
           compactObject({
             symbol: requireString(args, "symbol"),
             side: requireString(args, "side"),
-            orderType: requireString(args, "orderType"),
+            type: orderType,
             quantity: requireString(args, "quantity"),
             price: readString(args, "price"),
             leverage: readString(args, "leverage"),
-            clientOrderId: readString(args, "clientOrderId"),
-            priceType: readString(args, "priceType"),
-            triggerPrice: readString(args, "triggerPrice"),
+            newClientOrderId: clientId,
+            priceType,
+            stopPrice: readString(args, "stopPrice"),
             timeInForce: readString(args, "timeInForce"),
           }),
           privateRateLimit("futures_place_order", 20),
@@ -373,7 +383,7 @@ export function registerFuturesTools(): ToolSpec[] {
         type: "object",
         properties: {
           symbol: { type: "string", description: "e.g. BTCUSDT" },
-          marginType: { type: "string", enum: ["1", "2"], description: "1=cross, 2=isolated" },
+          marginType: { type: "string", enum: ["CROSS", "ISOLATED"], description: "CROSS=cross margin, ISOLATED=isolated margin" },
         },
         required: ["symbol", "marginType"],
       },

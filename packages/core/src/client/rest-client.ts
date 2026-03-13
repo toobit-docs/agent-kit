@@ -202,7 +202,7 @@ export class ToobitRestClient {
     const responseMsg = (parsed.msg as string) || undefined;
     const endpoint = `${config.method} ${config.path}`;
 
-    const hasBusinessCode = responseCode !== undefined && responseCode !== 0;
+    const hasBusinessCode = responseCode !== undefined && responseCode !== 0 && responseCode !== 200;
 
     if (hasBusinessCode) {
       const codeStr = String(responseCode);

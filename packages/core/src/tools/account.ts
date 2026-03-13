@@ -81,24 +81,26 @@ export function registerAccountTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          fromAccountType: { type: "number", description: "1=coin, 2=contract" },
-          toAccountType: { type: "number", description: "1=coin, 2=contract" },
-          tokenId: { type: "string", description: "e.g. USDT" },
-          amount: { type: "string" },
-          subAccountId: { type: "string" },
+          fromUid: { type: "number", description: "From user ID" },
+          toUid: { type: "number", description: "To user ID" },
+          fromAccountType: { type: "string", enum: ["MAIN", "FUTURES", "COPY_TRADING"], description: "MAIN=spot, FUTURES=contract, COPY_TRADING=copy trading" },
+          toAccountType: { type: "string", enum: ["MAIN", "FUTURES", "COPY_TRADING"], description: "MAIN=spot, FUTURES=contract, COPY_TRADING=copy trading" },
+          asset: { type: "string", description: "Asset name, e.g. USDT" },
+          quantity: { type: "string", description: "Transfer quantity" },
         },
-        required: ["tokenId", "amount"],
+        required: ["fromUid", "toUid", "fromAccountType", "toAccountType", "asset", "quantity"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privatePost(
           "/api/v1/subAccount/transfer",
           compactObject({
-            fromAccountType: readNumber(args, "fromAccountType"),
-            toAccountType: readNumber(args, "toAccountType"),
-            tokenId: requireString(args, "tokenId"),
-            amount: requireString(args, "amount"),
-            subAccountId: readString(args, "subAccountId"),
+            fromUid: readNumber(args, "fromUid"),
+            toUid: readNumber(args, "toUid"),
+            fromAccountType: requireString(args, "fromAccountType"),
+            toAccountType: requireString(args, "toAccountType"),
+            asset: requireString(args, "asset"),
+            quantity: requireString(args, "quantity"),
           }),
           privateRateLimit("account_sub_transfer", 5),
         );
@@ -193,18 +195,18 @@ export function registerAccountTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          tokenId: { type: "string", description: "e.g. USDT" },
-          chainType: { type: "string" },
+          coin: { type: "string", description: "Asset name, e.g. USDT" },
+          chainType: { type: "string", description: "Chain type, e.g. ERC20, TRC20, OMNI" },
         },
-        required: ["tokenId"],
+        required: ["coin", "chainType"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
           "/api/v1/account/deposit/address",
           compactObject({
-            tokenId: requireString(args, "tokenId"),
-            chainType: readString(args, "chainType"),
+            coin: requireString(args, "coin"),
+            chainType: requireString(args, "chainType"),
           }),
           privateRateLimit("account_get_deposit_address", 20),
         );
