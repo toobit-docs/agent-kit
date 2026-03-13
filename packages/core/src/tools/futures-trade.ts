@@ -123,7 +123,7 @@ export function registerFuturesTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
         },
         required: ["symbol"],
       },
@@ -334,7 +334,7 @@ export function registerFuturesTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           leverage: { type: "number", description: "Leverage value, e.g. 10" },
         },
         required: ["symbol", "leverage"],
@@ -360,7 +360,7 @@ export function registerFuturesTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
         },
         required: ["symbol"],
       },
@@ -382,7 +382,7 @@ export function registerFuturesTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           marginType: { type: "string", enum: ["CROSS", "ISOLATED"], description: "CROSS=cross margin, ISOLATED=isolated margin" },
         },
         required: ["symbol", "marginType"],
@@ -564,7 +564,7 @@ export function registerFuturesTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
         },
         required: ["symbol"],
       },

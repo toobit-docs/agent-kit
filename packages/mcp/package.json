@@ -1,6 +1,6 @@
 {
   "name": "toobit-trade-mcp",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "bin": {
     "toobit-trade-mcp": "dist/index.js"
