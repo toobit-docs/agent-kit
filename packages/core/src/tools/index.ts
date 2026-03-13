@@ -34,13 +34,16 @@ export interface ToolResult {
 export type ToolRunner = (toolName: string, args: ToolArgs) => Promise<ToolResult>;
 
 export function createToolRunner(client: ToobitRestClient, config: ToobitConfig): ToolRunner {
-  const fullConfig: ToobitConfig = { ...config, modules: [...MODULES] as ModuleId[], readOnly: false };
+  const fullConfig: ToobitConfig = { ...config, modules: [...MODULES] as ModuleId[] };
   const tools = allToolSpecs();
   const toolMap = new Map<string, ToolSpec>(tools.map((t) => [t.name, t]));
 
   return async (toolName: string, args: ToolArgs): Promise<ToolResult> => {
     const tool = toolMap.get(toolName);
     if (!tool) throw new Error(`Unknown tool: ${toolName}`);
+    if (config.readOnly && tool.isWrite) {
+      throw new Error(`Tool "${toolName}" is a write operation and is blocked in read-only mode.`);
+    }
     const result = await tool.handler(args, { config: fullConfig, client });
     return result as ToolResult;
   };

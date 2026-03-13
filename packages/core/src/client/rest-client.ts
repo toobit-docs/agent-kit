@@ -196,23 +196,21 @@ export class ToobitRestClient {
       );
     }
 
-    if (!response.ok) {
-      throw new ToobitApiError(
-        `HTTP ${response.status} from Toobit: ${parsed.msg ?? "Unknown error"}`,
-        { code: String(response.status), endpoint: `${config.method} ${config.path}` },
-      );
-    }
-
     const responseCode = parsed.code as number | undefined;
-    if (responseCode !== undefined && responseCode !== 0) {
-      const message = (parsed.msg as string) || "Toobit API request failed.";
-      const endpoint = `${config.method} ${config.path}`;
-      const codeStr = String(responseCode);
+    const responseMsg = (parsed.msg as string) || undefined;
+    const endpoint = `${config.method} ${config.path}`;
 
-      if (codeStr === "-1002" || codeStr === "-1022" || codeStr === "-2014" || codeStr === "-2015") {
+    const hasBusinessCode = responseCode !== undefined && responseCode !== 0;
+
+    if (hasBusinessCode) {
+      const codeStr = String(responseCode);
+      const message = responseMsg || "Toobit API request failed.";
+      const behavior = TOOBIT_CODE_BEHAVIORS[codeStr];
+
+      if (codeStr === "-1002" || codeStr === "-1022" || codeStr === "-1107" || codeStr === "-2014" || codeStr === "-2015" || codeStr === "-2017") {
         throw new AuthenticationError(
           message,
-          "Check API key, secret key and permissions.",
+          behavior?.suggestion ?? "Check API key, secret key and permissions.",
           endpoint,
         );
       }
@@ -221,12 +219,26 @@ export class ToobitRestClient {
         throw new RateLimitError(message, "Too many requests. Back off.", endpoint);
       }
 
-      const behavior = TOOBIT_CODE_BEHAVIORS[codeStr];
       throw new ToobitApiError(message, {
         code: codeStr,
         endpoint,
         suggestion: behavior?.suggestion,
       });
+    }
+
+    if (!response.ok) {
+      const rawMsg = responseMsg ?? "Unknown error";
+      let suggestion: string | undefined;
+      if (/symbol|paramter|parameter/i.test(rawMsg)) {
+        const isFuturesPath = /futures|fundingRate|openInterest|markPrice|contract|longShort|insurance|riskLimit/i.test(config.path);
+        suggestion = isFuturesPath
+          ? "Futures endpoints require contract symbol format, e.g. BTC-SWAP-USDT instead of BTCUSDT."
+          : "Spot endpoints require symbol format like BTCUSDT.";
+      }
+      throw new ToobitApiError(
+        `HTTP ${response.status} from Toobit: ${rawMsg}`,
+        { code: String(response.status), endpoint, suggestion },
+      );
     }
 
     return {

@@ -1,6 +1,15 @@
 import type { ToolSpec } from "./types.js";
 import { asRecord, compactObject, readNumber, readString, requireString } from "./helpers.js";
 import { publicRateLimit, TOOBIT_CANDLE_BARS } from "./common.js";
+import { ValidationError } from "../utils/errors.js";
+
+function readPositiveInt(args: Record<string, unknown>, key: string): number | undefined {
+  const value = readNumber(args, key);
+  if (value !== undefined && value < 1) {
+    throw new ValidationError(`Parameter "${key}" must be a positive integer.`);
+  }
+  return value;
+}
 
 function normalize(response: { endpoint: string; requestTime: string; data: unknown }): Record<string, unknown> {
   return { endpoint: response.endpoint, requestTime: response.requestTime, data: response.data };
@@ -47,7 +56,7 @@ export function registerMarketTools(): ToolSpec[] {
         const args = asRecord(rawArgs);
         const response = await context.client.publicGet(
           "/quote/v1/depth",
-          compactObject({ symbol: requireString(args, "symbol"), limit: readNumber(args, "limit") }),
+          compactObject({ symbol: requireString(args, "symbol"), limit: readPositiveInt(args, "limit") }),
           publicRateLimit("market_get_depth", 20),
         );
         return normalize(response);
@@ -71,7 +80,7 @@ export function registerMarketTools(): ToolSpec[] {
         const args = asRecord(rawArgs);
         const response = await context.client.publicGet(
           "/quote/v1/depth/merged",
-          compactObject({ symbol: requireString(args, "symbol"), scale: readNumber(args, "scale"), limit: readNumber(args, "limit") }),
+          compactObject({ symbol: requireString(args, "symbol"), scale: readNumber(args, "scale"), limit: readPositiveInt(args, "limit") }),
           publicRateLimit("market_get_merged_depth", 20),
         );
         return normalize(response);
@@ -94,7 +103,7 @@ export function registerMarketTools(): ToolSpec[] {
         const args = asRecord(rawArgs);
         const response = await context.client.publicGet(
           "/quote/v1/trades",
-          compactObject({ symbol: requireString(args, "symbol"), limit: readNumber(args, "limit") }),
+          compactObject({ symbol: requireString(args, "symbol"), limit: readPositiveInt(args, "limit") }),
           publicRateLimit("market_get_trades", 20),
         );
         return normalize(response);
@@ -125,7 +134,7 @@ export function registerMarketTools(): ToolSpec[] {
             interval: requireString(args, "interval"),
             startTime: readNumber(args, "startTime"),
             endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            limit: readPositiveInt(args, "limit"),
           }),
           publicRateLimit("market_get_klines", 20),
         );
@@ -135,12 +144,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_ticker_24hr",
       module: "market",
-      description: "Get 24h price change statistics for a spot symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get 24h price change statistics for a spot symbol. Omitting symbol returns ALL symbols (900+). Always specify a symbol unless you need the full list. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all symbols." },
+          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all symbols (warning: 900+ results)." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -156,12 +165,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_ticker_price",
       module: "market",
-      description: "Get latest price for a spot symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get latest price for a spot symbol. Omitting symbol returns ALL symbols (900+), which may consume many tokens. Always specify a symbol unless you need the full list. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all symbols." },
+          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all symbols (warning: 900+ results)." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -177,12 +186,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_book_ticker",
       module: "market",
-      description: "Get best bid/ask price for a spot symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get best bid/ask price for a spot symbol. Omitting symbol returns ALL symbols. Always specify a symbol unless you need the full list. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all symbols." },
+          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all symbols (warning: 900+ results)." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -220,7 +229,7 @@ export function registerMarketTools(): ToolSpec[] {
             interval: requireString(args, "interval"),
             startTime: readNumber(args, "startTime"),
             endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            limit: readPositiveInt(args, "limit"),
           }),
           publicRateLimit("market_get_index_klines", 20),
         );
@@ -230,12 +239,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_mark_price",
       module: "market",
-      description: "Get latest mark price for a futures symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get latest mark price for a futures symbol. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all." },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT. Omit for all." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -251,12 +260,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_mark_price_klines",
       module: "market",
-      description: "Get mark price K-line data. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get mark price K-line data. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           interval: { type: "string", enum: [...TOOBIT_CANDLE_BARS] },
           startTime: { type: "number" },
           endTime: { type: "number" },
@@ -273,7 +282,7 @@ export function registerMarketTools(): ToolSpec[] {
             interval: requireString(args, "interval"),
             startTime: readNumber(args, "startTime"),
             endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            limit: readPositiveInt(args, "limit"),
           }),
           publicRateLimit("market_get_mark_price_klines", 20),
         );
@@ -283,12 +292,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_funding_rate",
       module: "market",
-      description: "Get current funding rate for a futures symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get current funding rate for a futures symbol. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all." },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT. Omit for all." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -304,12 +313,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_funding_rate_history",
       module: "market",
-      description: "Get historical funding rates for a futures symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get historical funding rates for a futures symbol. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           startTime: { type: "number" },
           endTime: { type: "number" },
           limit: { type: "number", description: "Default 100, max 1000" },
@@ -324,7 +333,7 @@ export function registerMarketTools(): ToolSpec[] {
             symbol: requireString(args, "symbol"),
             startTime: readNumber(args, "startTime"),
             endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            limit: readPositiveInt(args, "limit"),
           }),
           publicRateLimit("market_get_funding_rate_history", 20),
         );
@@ -334,12 +343,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_open_interest",
       module: "market",
-      description: "Get total open interest for a futures symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get total open interest for a futures symbol. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all." },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT. Omit for all." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -360,7 +369,7 @@ export function registerMarketTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           period: { type: "string", description: "e.g. 5m, 15m, 30m, 1h, 2h, 4h, 6h, 12h, 1d" },
           startTime: { type: "number" },
           endTime: { type: "number" },
@@ -377,7 +386,7 @@ export function registerMarketTools(): ToolSpec[] {
             period: requireString(args, "period"),
             startTime: readNumber(args, "startTime"),
             endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            limit: readPositiveInt(args, "limit"),
           }),
           publicRateLimit("market_get_long_short_ratio", 20),
         );
@@ -387,12 +396,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_contract_ticker_24hr",
       module: "market",
-      description: "Get 24h price change statistics for a futures contract. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get 24h price change statistics for a futures contract. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all." },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT. Omit for all." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -408,12 +417,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_contract_ticker_price",
       module: "market",
-      description: "Get latest price for a futures contract. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get latest price for a futures contract. Supports both spot (BTCUSDT) and contract (BTC-SWAP-USDT) symbol formats. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all." },
+          symbol: { type: "string", description: "e.g. BTC-SWAP-USDT or BTCUSDT. Omit for all." },
         },
       },
       handler: async (rawArgs, context) => {
@@ -450,12 +459,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_insurance_fund",
       module: "market",
-      description: "Get insurance fund balance for a symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get insurance fund balance for a futures symbol. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
         },
         required: ["symbol"],
       },
@@ -472,12 +481,12 @@ export function registerMarketTools(): ToolSpec[] {
     {
       name: "market_get_risk_limits",
       module: "market",
-      description: "Get risk limits configuration for a futures symbol. Public endpoint. Rate limit: 20 req/s.",
+      description: "Get risk limits configuration for a futures symbol. Requires contract symbol format. Public endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
         },
         required: ["symbol"],
       },

@@ -62,8 +62,17 @@ export async function handleMarketCommand(cli: CliParsed, run: ToolRunner): Prom
     case "long-short-ratio":
       result = await run("market_get_long_short_ratio", { symbol: f.symbol, period: f.period ?? "1h" });
       break;
+    case "contract-ticker-price":
+      result = await run("market_get_contract_ticker_price", { symbol: f.symbol });
+      break;
+    case "insurance-fund":
+      result = await run("market_get_insurance_fund", { symbol: f.symbol });
+      break;
+    case "risk-limits":
+      result = await run("market_get_risk_limits", { symbol: f.symbol });
+      break;
     default:
-      process.stdout.write(`Unknown market subcommand: ${cli.subcommand}\nAvailable: time, info, ticker, ticker-24hr, depth, trades, klines, candles, book-ticker, mark-price, funding-rate, funding-rate-history, open-interest, index, contract-ticker, long-short-ratio\n`);
+      process.stdout.write(`Unknown market subcommand: ${cli.subcommand}\nAvailable: time, info, ticker, ticker-24hr, depth, trades, klines, candles, book-ticker, mark-price, funding-rate, funding-rate-history, open-interest, index, contract-ticker, contract-ticker-price, long-short-ratio, insurance-fund, risk-limits\n`);
       return;
   }
 

@@ -74,13 +74,13 @@ toobit-trade-mcp setup --client <client>
 # Market data (no API key needed)
 toobit market ticker --symbol BTCUSDT
 toobit market candles --symbol BTCUSDT --interval 1h --limit 10
-toobit market funding-rate --symbol BTCUSDT
+toobit market funding-rate --symbol BTC-SWAP-USDT
 
 # Spot trading
 toobit spot place --symbol BTCUSDT --side BUY --type MARKET --quantity 0.001
 
-# Futures trading
-toobit futures place --symbol BTCUSDT --side BUY_OPEN --orderType MARKET --quantity 1 --leverage 10
+# Futures trading (use contract symbol format: BTC-SWAP-USDT)
+toobit futures place --symbol BTC-SWAP-USDT --side BUY_OPEN --orderType MARKET --quantity 1 --leverage 10
 toobit futures positions
 
 # Account
@@ -198,6 +198,17 @@ toobit account balance
 
 </details>
 
+## Symbol Format
+
+Toobit uses different symbol formats for spot and futures:
+
+| Type | Format | Example |
+|------|--------|---------|
+| Spot | `BASEUSDT` | `BTCUSDT`, `ETHUSDT` |
+| Futures | `BASE-SWAP-USDT` | `BTC-SWAP-USDT`, `ETH-SWAP-USDT` |
+
+> **Important:** Futures endpoints (funding rate, mark price, open interest, etc.) require the contract symbol format `BTC-SWAP-USDT`. Using spot format `BTCUSDT` will return empty data or errors.
+
 ## Security
 
 1. **Local execution** — Keys stored locally in `~/.toobit/config.toml`, signatures computed locally
@@ -314,6 +325,17 @@ toobit-trade-mcp setup --client <client>
 | Cursor | `cursor` |
 | VS Code | `vscode` |
 | Windsurf | `windsurf` |
+
+## Symbol 格式
+
+Toobit 的现货和合约使用不同的 symbol 格式：
+
+| 类型 | 格式 | 示例 |
+|------|------|------|
+| 现货 | `BASEUSDT` | `BTCUSDT`、`ETHUSDT` |
+| 合约 | `BASE-SWAP-USDT` | `BTC-SWAP-USDT`、`ETH-SWAP-USDT` |
+
+> **重要：** 合约接口（资金费率、标记价、持仓量等）必须使用合约 symbol 格式 `BTC-SWAP-USDT`。使用现货格式 `BTCUSDT` 会返回空数据或报错。
 
 ## 安全
 
