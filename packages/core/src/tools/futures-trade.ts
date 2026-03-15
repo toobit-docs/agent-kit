@@ -22,7 +22,7 @@ export function registerFuturesTools(): ToolSpec[] {
           quantity: { type: "string", description: "Order quantity (contracts)" },
           price: { type: "string", description: "Required for LIMIT orders with priceType=INPUT" },
           leverage: { type: "string", description: "IGNORED by place-order API. Use futures_set_leverage to set leverage before placing orders." },
-          newClientOrderId: { type: "string", description: "Unique client order ID. Auto-generated if omitted." },
+          newClientOrderId: { type: "string", description: "Unique client order ID. Auto-generated if omitted. Only [a-zA-Z0-9_\\-.]  allowed; other characters are stripped." },
           priceType: { type: "string", enum: ["INPUT", "OPPONENT", "QUEUE", "OVER", "MARKET"], description: "Price type. INPUT=specified price, MARKET=market price" },
           stopPrice: { type: "string", description: "Trigger price for STOP orders" },
           timeInForce: { type: "string", enum: ["GTC", "IOC", "FOK"] },
@@ -40,7 +40,7 @@ export function registerFuturesTools(): ToolSpec[] {
         }
 
         const rawClientId = readString(args, "newClientOrderId");
-        const clientId = rawClientId ? rawClientId.replace(/[<>"'&]/g, "") : `mcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const clientId = rawClientId ? rawClientId.replace(/[^a-zA-Z0-9_\-\.]/g, "") : `mcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
         const response = await context.client.privatePost(
           "/api/v1/futures/order",
