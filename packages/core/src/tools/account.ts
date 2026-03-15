@@ -135,7 +135,7 @@ export function registerAccountTools(): ToolSpec[] {
           addressExt: { type: "string", description: "Memo/tag if required" },
           chainType: { type: "string" },
           withdrawQuantity: { type: "string" },
-          clientOrderId: { type: "string" },
+          clientOrderId: { type: "string", description: "Only [a-zA-Z0-9_\\-.]  allowed; other characters are stripped." },
         },
         required: ["tokenId", "address", "chainType", "withdrawQuantity"],
       },
@@ -149,7 +149,7 @@ export function registerAccountTools(): ToolSpec[] {
             addressExt: readString(args, "addressExt"),
             chainType: requireString(args, "chainType"),
             withdrawQuantity: requireString(args, "withdrawQuantity"),
-            clientOrderId: readString(args, "clientOrderId"),
+            clientOrderId: readString(args, "clientOrderId")?.replace(/[^a-zA-Z0-9_\-\.]/g, ""),
           }),
           privateRateLimit("account_withdraw", 5),
         );

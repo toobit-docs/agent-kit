@@ -37,7 +37,7 @@ const TOOBIT_CODE_BEHAVIORS: Record<string, CodeBehavior> = {
   "-2014": { retry: false, suggestion: "Bad API key format." },
   "-2015": { retry: false, suggestion: "Invalid API key, IP, or permission." },
   "-2017": { retry: false, suggestion: "API key expired. Generate a new one." },
-  "-1130": { retry: false, suggestion: "Invalid symbol format. Futures endpoints require BTC-SWAP-USDT format; spot endpoints use BTCUSDT." },
+  "-1130": { retry: false, suggestion: "A parameter value is invalid. Check the error message for the specific parameter." },
   "-1107": { retry: false, suggestion: "API key is missing or malformed. Check X-BB-APIKEY header." },
 };
 
@@ -221,10 +221,25 @@ export class ToobitRestClient {
         throw new RateLimitError(message, "Too many requests. Back off.", endpoint);
       }
 
+      let suggestion = behavior?.suggestion;
+      if (codeStr === "-1130" && responseMsg) {
+        if (/symbol/i.test(responseMsg)) {
+          const isFuturesPath = /futures|fundingRate|openInterest|markPrice|contract|longShort|insurance|riskLimit/i.test(config.path);
+          suggestion = isFuturesPath
+            ? "Invalid symbol format. Futures endpoints require BTC-SWAP-USDT format; spot endpoints use BTCUSDT."
+            : "Invalid symbol format. Spot endpoints require symbol format like BTCUSDT.";
+        } else {
+          const paramMatch = responseMsg.match(/paramter\s+'([^']+)'|parameter\s+'([^']+)'/i);
+          if (paramMatch) {
+            suggestion = `Parameter '${paramMatch[1] || paramMatch[2]}' has an invalid value. Check the allowed range and format.`;
+          }
+        }
+      }
+
       throw new ToobitApiError(message, {
         code: codeStr,
         endpoint,
-        suggestion: behavior?.suggestion,
+        suggestion,
       });
     }
 

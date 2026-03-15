@@ -37,6 +37,11 @@ export function registerFuturesTools(): ToolSpec[] {
         if (orderType === "MARKET") {
           orderType = "LIMIT";
           priceType = "MARKET";
+        } else if (orderType === "LIMIT" && priceType === "MARKET") {
+          throw new Error(
+            'Conflicting parameters: orderType="LIMIT" with priceType="MARKET" would execute at market price, ignoring your limit price. '
+            + 'Use orderType="MARKET" for market orders, or remove priceType for limit orders.',
+          );
         }
 
         const rawClientId = readString(args, "newClientOrderId");

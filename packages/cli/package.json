@@ -1,6 +1,6 @@
 {
   "name": "toobit-trade-cli",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "type": "module",
   "bin": {
     "toobit": "dist/index.js"

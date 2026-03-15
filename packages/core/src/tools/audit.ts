@@ -21,8 +21,15 @@ export function registerAuditTools(): ToolSpec[] {
       handler: async (rawArgs) => {
         const args = asRecord(rawArgs);
         const dateStr = readString(args, "date") ?? new Date().toISOString().slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          throw new Error('Invalid date format. Must be YYYY-MM-DD (e.g. "2026-03-15").');
+        }
         const limit = readNumber(args, "limit") ?? 50;
-        const logPath = path.join(os.homedir(), ".toobit", "logs", `trade-${dateStr}.log`);
+        const logDir = path.join(os.homedir(), ".toobit", "logs");
+        const logPath = path.join(logDir, `trade-${dateStr}.log`);
+        if (!logPath.startsWith(logDir)) {
+          throw new Error("Invalid date value.");
+        }
 
         if (!fs.existsSync(logPath)) {
           return { endpoint: "local", requestTime: new Date().toISOString(), data: [] };
