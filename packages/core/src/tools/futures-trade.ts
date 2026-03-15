@@ -11,7 +11,7 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_place_order",
       module: "futures",
-      description: "Place a USDT-M futures order. For market orders, set orderType to MARKET — the handler automatically converts to type=LIMIT + priceType=MARKET as required by Toobit API. [CAUTION] Executes real trades. Private endpoint. Rate limit: 20 req/s.",
+      description: "Place a USDT-M futures order. For market orders, set orderType to MARKET — the handler automatically converts to type=LIMIT + priceType=MARKET as required by Toobit API. Leverage must be set separately via futures_set_leverage before placing orders. [CAUTION] Executes real trades. Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
@@ -21,7 +21,7 @@ export function registerFuturesTools(): ToolSpec[] {
           orderType: { type: "string", enum: ["LIMIT", "MARKET", "STOP"], description: "LIMIT=limit order, MARKET=market order (auto-converted), STOP=conditional order" },
           quantity: { type: "string", description: "Order quantity (contracts)" },
           price: { type: "string", description: "Required for LIMIT orders with priceType=INPUT" },
-          leverage: { type: "string", description: "Leverage, e.g. 10" },
+          leverage: { type: "string", description: "IGNORED by place-order API. Use futures_set_leverage to set leverage before placing orders." },
           newClientOrderId: { type: "string", description: "Unique client order ID. Auto-generated if omitted." },
           priceType: { type: "string", enum: ["INPUT", "OPPONENT", "QUEUE", "OVER", "MARKET"], description: "Price type. INPUT=specified price, MARKET=market price" },
           stopPrice: { type: "string", description: "Trigger price for STOP orders" },
@@ -39,7 +39,8 @@ export function registerFuturesTools(): ToolSpec[] {
           priceType = "MARKET";
         }
 
-        const clientId = readString(args, "newClientOrderId") ?? `mcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const rawClientId = readString(args, "newClientOrderId");
+        const clientId = rawClientId ? rawClientId.replace(/[<>"'&]/g, "") : `mcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
         const response = await context.client.privatePost(
           "/api/v1/futures/order",
@@ -49,7 +50,6 @@ export function registerFuturesTools(): ToolSpec[] {
             type: orderType,
             quantity: requireString(args, "quantity"),
             price: readString(args, "price"),
-            leverage: readString(args, "leverage"),
             newClientOrderId: clientId,
             priceType,
             stopPrice: readString(args, "stopPrice"),
@@ -162,16 +162,17 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_amend_order",
       module: "futures",
-      description: "Modify a futures order (price/quantity). Private endpoint. Rate limit: 20 req/s.",
+      description: "Modify a futures order (price/quantity). Requires the order type. Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
           orderId: { type: "string" },
+          type: { type: "string", enum: ["LIMIT", "STOP", "STOP_PROFIT_LOSS"], description: "Order type (required by API)" },
           quantity: { type: "string" },
           price: { type: "string" },
         },
-        required: ["orderId"],
+        required: ["orderId", "type"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
@@ -179,6 +180,7 @@ export function registerFuturesTools(): ToolSpec[] {
           "/api/v1/futures/order/update",
           compactObject({
             orderId: requireString(args, "orderId"),
+            type: requireString(args, "type"),
             quantity: readString(args, "quantity"),
             price: readString(args, "price"),
           }),
@@ -408,10 +410,10 @@ export function registerFuturesTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           side: { type: "string", enum: ["LONG", "SHORT"] },
-          stopLossPrice: { type: "string" },
-          takeProfitPrice: { type: "string" },
+          takeProfit: { type: "string", description: "Take-profit price" },
+          stopLoss: { type: "string", description: "Stop-loss price" },
         },
         required: ["symbol", "side"],
       },
@@ -422,8 +424,8 @@ export function registerFuturesTools(): ToolSpec[] {
           compactObject({
             symbol: requireString(args, "symbol"),
             side: requireString(args, "side"),
-            stopLossPrice: readString(args, "stopLossPrice"),
-            takeProfitPrice: readString(args, "takeProfitPrice"),
+            takeProfit: readString(args, "takeProfit"),
+            stopLoss: readString(args, "stopLoss"),
           }),
           privateRateLimit("futures_set_trading_stop", 10),
         );
@@ -632,11 +634,11 @@ export function registerFuturesTools(): ToolSpec[] {
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
+          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
           side: { type: "string", enum: ["LONG", "SHORT"] },
-          autoAddMargin: { type: "string", enum: ["true", "false"] },
+          enable: { type: "string", enum: ["ON", "OFF"], description: "ON=enable, OFF=disable" },
         },
-        required: ["symbol", "side", "autoAddMargin"],
+        required: ["symbol", "side", "enable"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
@@ -645,7 +647,7 @@ export function registerFuturesTools(): ToolSpec[] {
           compactObject({
             symbol: requireString(args, "symbol"),
             side: requireString(args, "side"),
-            autoAddMargin: requireString(args, "autoAddMargin"),
+            enable: requireString(args, "enable"),
           }),
           privateRateLimit("futures_auto_add_margin", 10),
         );

@@ -14,7 +14,6 @@ export async function handleFuturesCommand(cli: CliParsed, run: ToolRunner): Pro
         orderType: f.orderType ?? f.type ?? "MARKET",
         quantity: f.quantity,
         price: f.price,
-        leverage: f.leverage,
       });
       break;
     case "cancel":

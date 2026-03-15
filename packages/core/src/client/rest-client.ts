@@ -231,7 +231,7 @@ export class ToobitRestClient {
     if (!response.ok) {
       const rawMsg = responseMsg ?? "Unknown error";
       let suggestion: string | undefined;
-      if (/symbol|paramter|parameter/i.test(rawMsg)) {
+      if (/symbol.*not valid|invalid.*symbol|paramter.*symbol|parameter.*symbol|symbol.*format/i.test(rawMsg)) {
         const isFuturesPath = /futures|fundingRate|openInterest|markPrice|contract|longShort|insurance|riskLimit/i.test(config.path);
         suggestion = isFuturesPath
           ? "Futures endpoints require contract symbol format, e.g. BTC-SWAP-USDT instead of BTCUSDT."
