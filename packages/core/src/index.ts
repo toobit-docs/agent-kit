@@ -11,6 +11,7 @@ export type { ToolSpec, ToolContext, ToolArgs } from "./tools/types.js";
 export type { RequestResult } from "./client/types.js";
 export { readTomlProfile, readFullConfig, writeFullConfig, configFilePath, tomlStringify } from "./config/toml.js";
 export type { ToobitProfile, ToobitTomlConfig } from "./config/toml.js";
+export { ConfigWatcher } from "./config/watcher.js";
 export { TradeLogger } from "./utils/logger.js";
 export type { LogLevel, LogEntry } from "./utils/logger.js";
 export { runSetup, printSetupUsage, getConfigPath, SUPPORTED_CLIENTS } from "./setup.js";

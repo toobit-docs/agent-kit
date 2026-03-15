@@ -8,6 +8,7 @@ import {
   printSetupUsage,
   SUPPORTED_CLIENTS,
   configFilePath,
+  ConfigWatcher,
 } from "@toobit_agent/agent-toobitkit-core";
 import type { LogLevel, ClientId } from "@toobit_agent/agent-toobitkit-core";
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
@@ -122,16 +123,19 @@ export async function main(): Promise<void> {
     return;
   }
 
-  const config = loadConfig({
+  const cliOptions = {
     modules: cli.modules,
     profile: cli.profile,
     readOnly: cli.readOnly,
     userAgent: `${SERVER_NAME}/${SERVER_VERSION}`,
     sourceTag: "MCP",
-  });
+  };
+
+  const config = loadConfig(cliOptions);
+  const watcher = new ConfigWatcher(config, cliOptions);
 
   const logger = cli.noLog ? undefined : new TradeLogger(cli.logLevel as LogLevel);
-  const server = createServer(config, logger);
+  const server = createServer(config, logger, watcher);
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

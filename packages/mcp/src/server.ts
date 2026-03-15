@@ -14,7 +14,7 @@ import {
   toMcpTool,
 } from "@toobit_agent/agent-toobitkit-core";
 import type { ToobitConfig, ModuleId, ToolSpec } from "@toobit_agent/agent-toobitkit-core";
-import type { TradeLogger } from "@toobit_agent/agent-toobitkit-core";
+import type { TradeLogger, ConfigWatcher } from "@toobit_agent/agent-toobitkit-core";
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
 
 const SYSTEM_CAPABILITIES_TOOL_NAME = "system_get_capabilities";
@@ -101,25 +101,37 @@ function unknownToolResult(toolName: string, snap: CapabilitySnapshot): CallTool
   );
 }
 
-export function createServer(config: ToobitConfig, logger?: TradeLogger): Server {
-  const client = new ToobitRestClient(config);
-  const tools = buildTools(config);
-  const toolMap = new Map<string, ToolSpec>(tools.map((tool) => [tool.name, tool]));
+export function createServer(config: ToobitConfig, logger?: TradeLogger, watcher?: ConfigWatcher): Server {
+  let tools = buildTools(config);
+  let toolMap = new Map<string, ToolSpec>(tools.map((tool) => [tool.name, tool]));
+
+  if (watcher) {
+    watcher.setReloadCallback((newConfig) => {
+      tools = buildTools(newConfig);
+      toolMap = new Map<string, ToolSpec>(tools.map((tool) => [tool.name, tool]));
+    });
+  }
+
+  const resolveConfig = (): ToobitConfig => watcher ? watcher.getConfig() : config;
+  const resolveClient = (): ToobitRestClient => watcher ? watcher.getClient() : staticClient;
+  const staticClient = watcher ? undefined! : new ToobitRestClient(config);
 
   const server = new Server(
     { name: SERVER_NAME, version: SERVER_VERSION },
     { capabilities: { tools: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [...tools.map(toMcpTool), SYSTEM_CAPABILITIES_TOOL],
-  }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    watcher?.refresh();
+    return { tools: [...tools.map(toMcpTool), SYSTEM_CAPABILITIES_TOOL] };
+  });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const toolName = request.params.name;
+    const liveConfig = resolveConfig();
 
     if (toolName === SYSTEM_CAPABILITIES_TOOL_NAME) {
-      const snapshot = buildCapabilitySnapshot(config);
+      const snapshot = buildCapabilitySnapshot(liveConfig);
       return successResult(toolName, {
         server: { name: SERVER_NAME, version: SERVER_VERSION },
         capabilities: snapshot,
@@ -127,17 +139,17 @@ export function createServer(config: ToobitConfig, logger?: TradeLogger): Server
     }
 
     const tool = toolMap.get(toolName);
-    if (!tool) return unknownToolResult(toolName, buildCapabilitySnapshot(config));
+    if (!tool) return unknownToolResult(toolName, buildCapabilitySnapshot(liveConfig));
 
     const startTime = Date.now();
     try {
-      const response = await tool.handler(request.params.arguments ?? {}, { config, client });
+      const response = await tool.handler(request.params.arguments ?? {}, { config: liveConfig, client: resolveClient() });
       logger?.log("info", toolName, request.params.arguments ?? {}, response, Date.now() - startTime);
-      return successResult(toolName, response, buildCapabilitySnapshot(config));
+      return successResult(toolName, response, buildCapabilitySnapshot(liveConfig));
     } catch (error) {
       const level = error instanceof ToobitApiError ? "warn" : "error";
       logger?.log(level, toolName, request.params.arguments ?? {}, error, Date.now() - startTime);
-      return errorResult(toolName, error, buildCapabilitySnapshot(config));
+      return errorResult(toolName, error, buildCapabilitySnapshot(liveConfig));
     }
   });
 

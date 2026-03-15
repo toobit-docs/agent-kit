@@ -210,9 +210,11 @@ Toobit uses different symbol formats for spot and futures:
 ## Security
 
 1. **Local execution** — Keys stored locally in `~/.toobit/config.toml`, signatures computed locally
-2. **Read-only mode** (`--read-only`) — Data queries only
-3. **Module control** (`--modules`) — Load only the modules you need
-4. **Audit logging** — All calls logged to `~/.toobit/logs/` with auto-redacted parameters
+2. **Config hot-reload** — MCP server automatically detects changes to `config.toml` on every request (via file mtime check). No restart needed after rotating API keys. Invalid configs are rejected and the previous valid config stays active.
+3. **Read-only mode** (`--read-only`) — Data queries only
+4. **Module control** (`--modules`) — Load only the modules you need
+5. **Audit logging** — All calls logged to `~/.toobit/logs/` with auto-redacted parameters
+6. **Input sanitization** — `clientOrderId` uses whitelist `[a-zA-Z0-9_\-.]` to prevent injection attacks
 
 > **Security tip:** Never paste your API Key or Secret Key into AI chat. Use sub-account API keys with minimum required permissions.
 
