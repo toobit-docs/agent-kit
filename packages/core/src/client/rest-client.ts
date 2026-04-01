@@ -63,18 +63,18 @@ export class DeltaRestClient {
 
   public async publicGet<TData = unknown>(
     path: string,
-    query?: QueryParams,
+    query?: Record<string, unknown>,
     rateLimit?: RequestConfig["rateLimit"],
   ): Promise<RequestResult<TData>> {
-    return this.request<TData>({ method: "GET", path, auth: "public", query, rateLimit });
+    return this.request<TData>({ method: "GET", path, auth: "public", query: query as QueryParams, rateLimit });
   }
 
   public async privateGet<TData = unknown>(
     path: string,
-    query?: QueryParams,
+    query?: Record<string, unknown>,
     rateLimit?: RequestConfig["rateLimit"],
   ): Promise<RequestResult<TData>> {
-    return this.request<TData>({ method: "GET", path, auth: "private", query, rateLimit });
+    return this.request<TData>({ method: "GET", path, auth: "private", query: query as QueryParams, rateLimit });
   }
 
   public async privatePost<TData = unknown>(
