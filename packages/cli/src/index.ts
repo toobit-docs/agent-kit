@@ -1,10 +1,10 @@
 import {
   loadConfig,
-  ToobitRestClient,
+  DeltaRestClient,
   createToolRunner,
   toToolErrorPayload,
   configFilePath,
-} from "@toobit_agent/agent-toobitkit-core";
+} from "@delta_agent/agent-deltakit-core";
 import { parseCli } from "./parser.js";
 import { handleMarketCommand } from "./commands/market.js";
 import { handleSpotCommand } from "./commands/spot.js";
@@ -14,15 +14,15 @@ import { handleConfigCommand } from "./commands/config.js";
 
 function printHelp(): void {
   const help = `
-Toobit Trade CLI — Trade from your terminal
+Delta Exchange Trade CLI — Trade from your terminal
 
-Usage: toobit <command> <subcommand> [options]
+Usage: delta <command> <subcommand> [options]
 
 Commands:
-  market       Market data (ticker, depth, klines, funding-rate, etc.)
-  spot         Spot trading (place, cancel, orders, fills)
-  futures      USDT-M futures (place, cancel, positions, leverage, etc.)
-  account      Account info (balance, deposits, withdrawals, audit)
+  market       Market data (products, tickers, orderbook, candles, etc.)
+  spot         Spot trading (place, cancel, amend, orders, fills)
+  futures      Futures trading (place, cancel, positions, leverage, etc.)
+  account      Account info (balance, transactions, transfer, rate-limit)
   config       Configuration management (init, show, list)
 
 Global Options:
@@ -32,13 +32,13 @@ Global Options:
   --help             Show this help
 
 Examples:
-  toobit market ticker --symbol BTCUSDT
-  toobit market candles --symbol BTCUSDT --interval 1h --limit 10
-  toobit market funding-rate --symbol BTCUSDT
-  toobit spot place --symbol BTCUSDT --side BUY --type MARKET --quantity 0.001
-  toobit futures positions --symbol BTCUSDT
-  toobit account balance
-  toobit config init
+  delta market ticker --symbol BTCUSDT_PERP
+  delta market candles --symbol BTCUSDT_PERP --resolution 1h --limit 10
+  delta spot place --product-symbol BTCUSDT_SP --side buy --order-type market_order --size 0.001
+  delta futures positions
+  delta futures leverage --product-id 84 --leverage 10
+  delta account balance
+  delta config init
 `;
   process.stdout.write(help);
 }
@@ -60,11 +60,11 @@ async function main(): Promise<void> {
     modules: "all",
     profile: cli.profile,
     readOnly: cli.readOnly,
-    userAgent: "toobit-trade-cli/1.0.0",
+    userAgent: "delta-trade-cli/1.0.0",
     sourceTag: "CLI",
   });
 
-  const client = new ToobitRestClient(config);
+  const client = new DeltaRestClient(config);
   const run = createToolRunner(client, config);
 
   switch (cli.command) {

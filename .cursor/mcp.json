@@ -1,9 +1,9 @@
 {
   "mcpServers": {
-    "toobit-trade": {
+    "delta-trade": {
       "command": "node",
       "args": [
-        "/Users/date/Documents/w/agent-toobit-kit/packages/mcp/dist/index.js",
+        "/Users/date/Documents/w/agent-kit/packages/mcp/dist/index.js",
         "--modules",
         "all"
       ],

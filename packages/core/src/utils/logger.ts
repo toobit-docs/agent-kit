@@ -45,7 +45,7 @@ export class TradeLogger {
 
   constructor(logLevel: LogLevel = "info", logDir?: string) {
     this.logLevel = logLevel;
-    this.logDir = logDir ?? path.join(os.homedir(), ".toobit", "logs");
+    this.logDir = logDir ?? path.join(os.homedir(), ".delta", "logs");
   }
 
   getLogPath(date?: Date): string {

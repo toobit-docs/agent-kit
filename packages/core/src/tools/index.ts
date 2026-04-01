@@ -1,5 +1,5 @@
-import type { ToobitConfig } from "../config.js";
-import type { ToobitRestClient } from "../client/rest-client.js";
+import type { DeltaConfig } from "../config.js";
+import type { DeltaRestClient } from "../client/rest-client.js";
 import { MODULES, type ModuleId } from "../constants.js";
 import { registerAccountTools } from "./account.js";
 import { registerAuditTools } from "./audit.js";
@@ -18,7 +18,7 @@ function allToolSpecs(): ToolSpec[] {
   ];
 }
 
-export function buildTools(config: ToobitConfig): ToolSpec[] {
+export function buildTools(config: DeltaConfig): ToolSpec[] {
   const enabledModules = new Set(config.modules);
   const tools = allToolSpecs().filter((tool) => enabledModules.has(tool.module));
   if (!config.readOnly) return tools;
@@ -33,8 +33,8 @@ export interface ToolResult {
 
 export type ToolRunner = (toolName: string, args: ToolArgs) => Promise<ToolResult>;
 
-export function createToolRunner(client: ToobitRestClient, config: ToobitConfig): ToolRunner {
-  const fullConfig: ToobitConfig = { ...config, modules: [...MODULES] as ModuleId[] };
+export function createToolRunner(client: DeltaRestClient, config: DeltaConfig): ToolRunner {
+  const fullConfig: DeltaConfig = { ...config, modules: [...MODULES] as ModuleId[] };
   const tools = allToolSpecs();
   const toolMap = new Map<string, ToolSpec>(tools.map((t) => [t.name, t]));
 

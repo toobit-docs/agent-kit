@@ -6,15 +6,15 @@ import {
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
-  ToobitRestClient,
+  DeltaRestClient,
   buildTools,
   MODULES,
-  ToobitApiError,
+  DeltaApiError,
   toToolErrorPayload,
   toMcpTool,
-} from "@toobit_agent/agent-toobitkit-core";
-import type { ToobitConfig, ModuleId, ToolSpec } from "@toobit_agent/agent-toobitkit-core";
-import type { TradeLogger, ConfigWatcher } from "@toobit_agent/agent-toobitkit-core";
+} from "@delta_agent/agent-deltakit-core";
+import type { DeltaConfig, ModuleId, ToolSpec } from "@delta_agent/agent-deltakit-core";
+import type { TradeLogger, ConfigWatcher } from "@delta_agent/agent-deltakit-core";
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
 
 const SYSTEM_CAPABILITIES_TOOL_NAME = "system_get_capabilities";
@@ -38,7 +38,7 @@ interface CapabilitySnapshot {
   moduleAvailability: Record<ModuleId, { status: ModuleCapabilityStatus; reasonCode?: string }>;
 }
 
-function buildCapabilitySnapshot(config: ToobitConfig): CapabilitySnapshot {
+function buildCapabilitySnapshot(config: DeltaConfig): CapabilitySnapshot {
   const enabledModules = new Set(config.modules);
   const moduleAvailability = {} as CapabilitySnapshot["moduleAvailability"];
 
@@ -93,7 +93,7 @@ function errorResult(toolName: string, error: unknown, snap: CapabilitySnapshot)
 function unknownToolResult(toolName: string, snap: CapabilitySnapshot): CallToolResult {
   return errorResult(
     toolName,
-    new ToobitApiError(`Tool "${toolName}" is not available in this server session.`, {
+    new DeltaApiError(`Tool "${toolName}" is not available in this server session.`, {
       code: "TOOL_NOT_AVAILABLE",
       suggestion: "Call list_tools again and choose from currently available tools.",
     }),
@@ -101,7 +101,7 @@ function unknownToolResult(toolName: string, snap: CapabilitySnapshot): CallTool
   );
 }
 
-export function createServer(config: ToobitConfig, logger?: TradeLogger, watcher?: ConfigWatcher): Server {
+export function createServer(config: DeltaConfig, logger?: TradeLogger, watcher?: ConfigWatcher): Server {
   let tools = buildTools(config);
   let toolMap = new Map<string, ToolSpec>(tools.map((tool) => [tool.name, tool]));
 
@@ -112,9 +112,9 @@ export function createServer(config: ToobitConfig, logger?: TradeLogger, watcher
     });
   }
 
-  const resolveConfig = (): ToobitConfig => watcher ? watcher.getConfig() : config;
-  const resolveClient = (): ToobitRestClient => watcher ? watcher.getClient() : staticClient;
-  const staticClient = watcher ? undefined! : new ToobitRestClient(config);
+  const resolveConfig = (): DeltaConfig => watcher ? watcher.getConfig() : config;
+  const resolveClient = (): DeltaRestClient => watcher ? watcher.getClient() : staticClient;
+  const staticClient = watcher ? undefined! : new DeltaRestClient(config);
 
   const server = new Server(
     { name: SERVER_NAME, version: SERVER_VERSION },
@@ -147,7 +147,7 @@ export function createServer(config: ToobitConfig, logger?: TradeLogger, watcher
       logger?.log("info", toolName, request.params.arguments ?? {}, response, Date.now() - startTime);
       return successResult(toolName, response, buildCapabilitySnapshot(liveConfig));
     } catch (error) {
-      const level = error instanceof ToobitApiError ? "warn" : "error";
+      const level = error instanceof DeltaApiError ? "warn" : "error";
       logger?.log(level, toolName, request.params.arguments ?? {}, error, Date.now() - startTime);
       return errorResult(toolName, error, buildCapabilitySnapshot(liveConfig));
     }

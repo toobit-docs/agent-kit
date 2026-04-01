@@ -45,14 +45,14 @@ export function getConfigPath(client: ClientId): string | null {
   }
 }
 
-const NPX_PACKAGE = "@toobit_ai/toobit-trade-mcp";
+const NPX_PACKAGE = "@delta_agent/delta-trade-mcp";
 
 function buildEntry(
   client: ClientId,
   args: string[],
 ): Record<string, unknown> {
   if (client === "vscode") {
-    return { type: "stdio", command: "toobit-trade-mcp", args };
+    return { type: "stdio", command: "delta-trade-mcp", args };
   }
   return { command: "npx", args: ["-y", NPX_PACKAGE, ...args] };
 }
@@ -94,7 +94,7 @@ function mergeJsonConfig(
 
 export function printSetupUsage(): void {
   process.stdout.write(
-    `Usage: toobit-trade-mcp setup --client <client> [--profile <name>] [--modules <list>]\n\n` +
+    `Usage: delta-trade-mcp setup --client <client> [--profile <name>] [--modules <list>]\n\n` +
     `Clients:\n` +
     SUPPORTED_CLIENTS.map((id) => `  ${id.padEnd(16)} ${CLIENT_NAMES[id]}`).join("\n") +
     `\n\nOptions:\n` +
@@ -107,10 +107,10 @@ export function runSetup(options: SetupOptions): void {
   const { client } = options;
   const name = CLIENT_NAMES[client];
   const args = buildArgs(options);
-  const serverName = options.profile ? `toobit-trade-mcp-${options.profile}` : "toobit-trade-mcp";
+  const serverName = options.profile ? `delta-trade-mcp-${options.profile}` : "delta-trade-mcp";
 
   if (client === "claude-code") {
-    const claudeArgs = ["mcp", "add", "--transport", "stdio", serverName, "--", "toobit-trade-mcp", ...args];
+    const claudeArgs = ["mcp", "add", "--transport", "stdio", serverName, "--", "delta-trade-mcp", ...args];
     process.stdout.write(`Running: claude ${claudeArgs.join(" ")}\n`);
     execFileSync("claude", claudeArgs, { stdio: "inherit" });
     process.stdout.write(`✓ Configured ${name}\n`);

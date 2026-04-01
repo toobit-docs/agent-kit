@@ -3,7 +3,7 @@ export type ErrorType =
   | "AuthenticationError"
   | "RateLimitError"
   | "ValidationError"
-  | "ToobitApiError"
+  | "DeltaApiError"
   | "NetworkError"
   | "InternalError";
 
@@ -17,7 +17,7 @@ export interface ToolErrorPayload {
   timestamp: string;
 }
 
-export class ToobitMcpError extends Error {
+export class DeltaMcpError extends Error {
   public readonly type: ErrorType;
   public readonly code?: string;
   public readonly suggestion?: string;
@@ -42,31 +42,31 @@ export class ToobitMcpError extends Error {
   }
 }
 
-export class ConfigError extends ToobitMcpError {
+export class ConfigError extends DeltaMcpError {
   public constructor(message: string, suggestion?: string) {
     super("ConfigError", message, { suggestion });
   }
 }
 
-export class ValidationError extends ToobitMcpError {
+export class ValidationError extends DeltaMcpError {
   public constructor(message: string, suggestion?: string) {
     super("ValidationError", message, { suggestion });
   }
 }
 
-export class RateLimitError extends ToobitMcpError {
+export class RateLimitError extends DeltaMcpError {
   public constructor(message: string, suggestion?: string, endpoint?: string) {
     super("RateLimitError", message, { suggestion, endpoint });
   }
 }
 
-export class AuthenticationError extends ToobitMcpError {
+export class AuthenticationError extends DeltaMcpError {
   public constructor(message: string, suggestion?: string, endpoint?: string) {
     super("AuthenticationError", message, { suggestion, endpoint });
   }
 }
 
-export class ToobitApiError extends ToobitMcpError {
+export class DeltaApiError extends DeltaMcpError {
   public constructor(
     message: string,
     options?: {
@@ -76,11 +76,11 @@ export class ToobitApiError extends ToobitMcpError {
       cause?: unknown;
     },
   ) {
-    super("ToobitApiError", message, options);
+    super("DeltaApiError", message, options);
   }
 }
 
-export class NetworkError extends ToobitMcpError {
+export class NetworkError extends DeltaMcpError {
   public constructor(message: string, endpoint?: string, cause?: unknown) {
     super("NetworkError", message, {
       endpoint,
@@ -94,7 +94,7 @@ export function toToolErrorPayload(
   error: unknown,
   fallbackEndpoint?: string,
 ): ToolErrorPayload {
-  if (error instanceof ToobitMcpError) {
+  if (error instanceof DeltaMcpError) {
     return {
       error: true,
       type: error.type,

@@ -1,4 +1,4 @@
-import type { ToolRunner } from "@toobit_agent/agent-toobitkit-core";
+import type { ToolRunner } from "@delta_agent/agent-deltakit-core";
 import type { CliParsed } from "../parser.js";
 import { formatJson } from "../formatter.js";
 
@@ -9,42 +9,61 @@ export async function handleSpotCommand(cli: CliParsed, run: ToolRunner): Promis
   switch (cli.subcommand) {
     case "place":
       result = await run("spot_place_order", {
-        symbol: f.symbol,
+        product_id: f.productId ? Number(f.productId) : undefined,
+        product_symbol: f.productSymbol ?? f.symbol,
         side: f.side,
-        type: f.type ?? "MARKET",
-        quantity: f.quantity,
-        price: f.price,
+        order_type: f.orderType ?? f.type ?? "market_order",
+        size: f.size ? Number(f.size) : (f.quantity ? Number(f.quantity) : undefined),
+        limit_price: f.limitPrice ?? f.price,
+        client_order_id: f.clientOrderId,
+        time_in_force: f.timeInForce as string | undefined,
       });
       break;
     case "cancel":
-      result = await run("spot_cancel_order", { orderId: f.orderId, clientOrderId: f.clientOrderId });
+      result = await run("spot_cancel_order", {
+        id: f.id ? Number(f.id) : (f.orderId ? Number(f.orderId) : undefined),
+        product_id: f.productId ? Number(f.productId) : undefined,
+      });
       break;
     case "cancel-all":
-      result = await run("spot_cancel_open_orders", { symbol: f.symbol });
+      result = await run("spot_batch_cancel_orders", {
+        product_id: f.productId ? Number(f.productId) : undefined,
+      });
       break;
-    case "get":
-      result = await run("spot_get_order", { orderId: f.orderId, clientOrderId: f.clientOrderId });
+    case "amend":
+      result = await run("spot_amend_order", {
+        id: f.id ? Number(f.id) : (f.orderId ? Number(f.orderId) : undefined),
+        product_id: f.productId ? Number(f.productId) : undefined,
+        size: f.size ? Number(f.size) : (f.quantity ? Number(f.quantity) : undefined),
+        limit_price: f.limitPrice ?? f.price,
+      });
       break;
-    case "open-orders":
     case "orders":
-      result = await run("spot_get_open_orders", { symbol: f.symbol, limit: f.limit ? Number(f.limit) : undefined });
+    case "open-orders":
+      result = await run("spot_get_open_orders", {
+        product_id: f.productId ? Number(f.productId) : undefined,
+        product_symbol: f.productSymbol ?? f.symbol,
+        page_size: f.limit ? Number(f.limit) : undefined,
+      });
       break;
     case "history":
-      result = await run("spot_get_trade_orders", {
-        symbol: f.symbol,
-        limit: f.limit ? Number(f.limit) : undefined,
-        startTime: f.startTime ? Number(f.startTime) : undefined,
-        endTime: f.endTime ? Number(f.endTime) : undefined,
+      result = await run("spot_get_order_history", {
+        product_id: f.productId ? Number(f.productId) : undefined,
+        product_symbol: f.productSymbol ?? f.symbol,
+        page_size: f.limit ? Number(f.limit) : undefined,
       });
       break;
     case "fills":
       result = await run("spot_get_fills", {
-        symbol: f.symbol,
-        limit: f.limit ? Number(f.limit) : undefined,
+        product_id: f.productId ? Number(f.productId) : undefined,
+        product_symbol: f.productSymbol ?? f.symbol,
+        page_size: f.limit ? Number(f.limit) : undefined,
       });
       break;
     default:
-      process.stdout.write(`Unknown spot subcommand: ${cli.subcommand}\nAvailable: place, cancel, cancel-all, get, orders, open-orders, history, fills\n`);
+      process.stdout.write(
+        `Unknown spot subcommand: ${cli.subcommand}\nAvailable: place, cancel, cancel-all, amend, orders, open-orders, history, fills\n`,
+      );
       return;
   }
 

@@ -1,24 +1,24 @@
 import { statSync } from "node:fs";
 import { configFilePath } from "./toml.js";
 import { loadConfig } from "../config.js";
-import type { ToobitConfig, CliOptions } from "../config.js";
-import { ToobitRestClient } from "../client/rest-client.js";
+import type { DeltaConfig, CliOptions } from "../config.js";
+import { DeltaRestClient } from "../client/rest-client.js";
 
 export class ConfigWatcher {
-  private config: ToobitConfig;
-  private client: ToobitRestClient;
+  private config: DeltaConfig;
+  private client: DeltaRestClient;
   private lastMtimeMs: number;
   private readonly cliOptions: CliOptions;
-  private onReload?: (config: ToobitConfig) => void;
+  private onReload?: (config: DeltaConfig) => void;
 
-  constructor(initialConfig: ToobitConfig, cliOptions: CliOptions) {
+  constructor(initialConfig: DeltaConfig, cliOptions: CliOptions) {
     this.config = initialConfig;
-    this.client = new ToobitRestClient(initialConfig);
+    this.client = new DeltaRestClient(initialConfig);
     this.cliOptions = cliOptions;
     this.lastMtimeMs = this.fileMtimeMs();
   }
 
-  setReloadCallback(fn: (config: ToobitConfig) => void): void {
+  setReloadCallback(fn: (config: DeltaConfig) => void): void {
     this.onReload = fn;
   }
 
@@ -43,36 +43,36 @@ export class ConfigWatcher {
       const newConfig = loadConfig(this.cliOptions);
       const oldKey = this.config.apiKey;
       this.config = newConfig;
-      this.client = new ToobitRestClient(newConfig);
+      this.client = new DeltaRestClient(newConfig);
       this.lastMtimeMs = currentMs;
 
       const keyChanged = oldKey !== newConfig.apiKey;
       this.onReload?.(newConfig);
       if (keyChanged) {
         process.stderr.write(
-          `[toobit] Config reloaded — API key changed (${configFilePath()})\n`,
+          `[delta] Config reloaded — API key changed (${configFilePath()})\n`,
         );
       } else {
         process.stderr.write(
-          `[toobit] Config reloaded (${configFilePath()})\n`,
+          `[delta] Config reloaded (${configFilePath()})\n`,
         );
       }
       return true;
     } catch (err) {
       process.stderr.write(
-        `[toobit] Config reload failed, keeping previous config: ${err instanceof Error ? err.message : String(err)}\n`,
+        `[delta] Config reload failed, keeping previous config: ${err instanceof Error ? err.message : String(err)}\n`,
       );
       this.lastMtimeMs = currentMs;
       return false;
     }
   }
 
-  getConfig(): ToobitConfig {
+  getConfig(): DeltaConfig {
     this.refresh();
     return this.config;
   }
 
-  getClient(): ToobitRestClient {
+  getClient(): DeltaRestClient {
     this.refresh();
     return this.client;
   }

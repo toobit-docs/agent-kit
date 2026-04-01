@@ -1,6 +1,6 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import type { ToobitRestClient } from "../client/rest-client.js";
-import type { ToobitConfig } from "../config.js";
+import type { DeltaRestClient } from "../client/rest-client.js";
+import type { DeltaConfig } from "../config.js";
 import type { ModuleId } from "../constants.js";
 
 export type ToolArgs = Record<string, unknown>;
@@ -8,8 +8,8 @@ export type ToolArgs = Record<string, unknown>;
 export type JsonSchema = Tool["inputSchema"];
 
 export interface ToolContext {
-  config: ToobitConfig;
-  client: ToobitRestClient;
+  config: DeltaConfig;
+  client: DeltaRestClient;
 }
 
 export interface ToolSpec {

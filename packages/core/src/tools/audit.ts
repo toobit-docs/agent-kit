@@ -9,7 +9,7 @@ export function registerAuditTools(): ToolSpec[] {
     {
       name: "trade_get_history",
       module: "account",
-      description: "Read local audit log entries from ~/.toobit/logs/. Returns recent tool call records. No API call.",
+      description: "Read local audit log entries from ~/.delta/logs/. Returns recent tool call records. No API call.",
       isWrite: false,
       inputSchema: {
         type: "object",
@@ -25,7 +25,7 @@ export function registerAuditTools(): ToolSpec[] {
           throw new Error('Invalid date format. Must be YYYY-MM-DD (e.g. "2026-03-15").');
         }
         const limit = readNumber(args, "limit") ?? 50;
-        const logDir = path.join(os.homedir(), ".toobit", "logs");
+        const logDir = path.join(os.homedir(), ".delta", "logs");
         const logPath = path.join(logDir, `trade-${dateStr}.log`);
         if (!logPath.startsWith(logDir)) {
           throw new Error("Invalid date value.");

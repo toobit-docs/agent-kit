@@ -5,36 +5,36 @@ import { parse, stringify } from "smol-toml";
 
 export { stringify as tomlStringify };
 
-export interface ToobitProfile {
+export interface DeltaProfile {
   api_key?: string;
   secret_key?: string;
   base_url?: string;
   timeout_ms?: number;
 }
 
-export interface ToobitTomlConfig {
+export interface DeltaTomlConfig {
   default_profile?: string;
-  profiles: Record<string, ToobitProfile>;
+  profiles: Record<string, DeltaProfile>;
 }
 
 export function configFilePath(): string {
-  return join(homedir(), ".toobit", "config.toml");
+  return join(homedir(), ".delta", "config.toml");
 }
 
-export function readFullConfig(): ToobitTomlConfig {
+export function readFullConfig(): DeltaTomlConfig {
   const path = configFilePath();
   if (!existsSync(path)) return { profiles: {} };
   const raw = readFileSync(path, "utf-8");
-  return parse(raw) as unknown as ToobitTomlConfig;
+  return parse(raw) as unknown as DeltaTomlConfig;
 }
 
-export function readTomlProfile(profileName?: string): ToobitProfile {
+export function readTomlProfile(profileName?: string): DeltaProfile {
   const config = readFullConfig();
   const name = profileName ?? config.default_profile ?? "default";
   return config.profiles?.[name] ?? {};
 }
 
-export function writeFullConfig(config: ToobitTomlConfig): void {
+export function writeFullConfig(config: DeltaTomlConfig): void {
   const path = configFilePath();
   const dir = dirname(path);
   if (!existsSync(dir)) {

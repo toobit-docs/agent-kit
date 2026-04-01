@@ -1,4 +1,4 @@
-import type { ToolRunner } from "@toobit_agent/agent-toobitkit-core";
+import type { ToolRunner } from "@delta_agent/agent-deltakit-core";
 import type { CliParsed } from "../parser.js";
 import { formatJson } from "../formatter.js";
 
@@ -7,72 +7,64 @@ export async function handleMarketCommand(cli: CliParsed, run: ToolRunner): Prom
   let result;
 
   switch (cli.subcommand) {
-    case "time":
-      result = await run("market_get_server_time", {});
+    case "products":
+      result = await run("market_get_products", {
+        contract_types: f.contractTypes as string | undefined,
+        underlying_asset_symbols: f.underlyingAssets as string | undefined,
+        state: f.state as string | undefined,
+        page_size: f.limit ? Number(f.limit) : undefined,
+      });
       break;
-    case "info":
-      result = await run("market_get_exchange_info", {});
+    case "assets":
+      result = await run("market_get_assets", {});
+      break;
+    case "tickers":
+      result = await run("market_get_tickers", {
+        contract_types: f.contractTypes as string | undefined,
+        underlying_asset_symbols: f.underlyingAssets as string | undefined,
+      });
       break;
     case "ticker":
-      result = await run("market_get_ticker_price", { symbol: f.symbol });
+      result = await run("market_get_ticker", { symbol: f.symbol });
       break;
-    case "ticker-24hr":
-      result = await run("market_get_ticker_24hr", { symbol: f.symbol });
-      break;
+    case "orderbook":
     case "depth":
-      result = await run("market_get_depth", { symbol: f.symbol, limit: f.limit ? Number(f.limit) : undefined });
+      result = await run("market_get_orderbook", {
+        symbol: f.symbol,
+        depth: f.limit ? Number(f.limit) : undefined,
+      });
       break;
     case "trades":
-      result = await run("market_get_trades", { symbol: f.symbol, limit: f.limit ? Number(f.limit) : undefined });
+      result = await run("market_get_trades", {
+        symbol: f.symbol,
+        limit: f.limit ? Number(f.limit) : undefined,
+      });
       break;
-    case "klines":
     case "candles":
-      result = await run("market_get_klines", {
+    case "klines":
+      result = await run("market_get_candles", {
         symbol: f.symbol,
-        interval: f.interval ?? f.bar ?? "1h",
-        limit: f.limit ? Number(f.limit) : undefined,
-        startTime: f.startTime ? Number(f.startTime) : undefined,
-        endTime: f.endTime ? Number(f.endTime) : undefined,
+        resolution: (f.resolution ?? f.interval ?? f.bar ?? "1h") as string,
+        start: f.startTime ? Number(f.startTime) : undefined,
+        end: f.endTime ? Number(f.endTime) : undefined,
       });
       break;
-    case "book-ticker":
-      result = await run("market_get_book_ticker", { symbol: f.symbol });
-      break;
-    case "mark-price":
-      result = await run("market_get_mark_price", { symbol: f.symbol });
-      break;
-    case "funding-rate":
-      result = await run("market_get_funding_rate", { symbol: f.symbol });
-      break;
-    case "funding-rate-history":
-      result = await run("market_get_funding_rate_history", {
-        symbol: f.symbol,
-        limit: f.limit ? Number(f.limit) : undefined,
+    case "indices":
+      result = await run("market_get_indices", {
+        underlying_asset_symbols: f.underlyingAssets as string | undefined,
       });
       break;
-    case "open-interest":
-      result = await run("market_get_open_interest", { symbol: f.symbol });
-      break;
-    case "index":
-      result = await run("market_get_index_price", { symbol: f.symbol });
-      break;
-    case "contract-ticker":
-      result = await run("market_get_contract_ticker_24hr", { symbol: f.symbol });
-      break;
-    case "long-short-ratio":
-      result = await run("market_get_long_short_ratio", { symbol: f.symbol, period: f.period ?? "1h" });
-      break;
-    case "contract-ticker-price":
-      result = await run("market_get_contract_ticker_price", { symbol: f.symbol });
-      break;
-    case "insurance-fund":
-      result = await run("market_get_insurance_fund", { symbol: f.symbol });
-      break;
-    case "risk-limits":
-      result = await run("market_get_risk_limits", { symbol: f.symbol });
+    case "settlement":
+    case "settlement-prices":
+      result = await run("market_get_settlement_prices", {
+        contract_types: f.contractTypes as string | undefined,
+        page_size: f.limit ? Number(f.limit) : undefined,
+      });
       break;
     default:
-      process.stdout.write(`Unknown market subcommand: ${cli.subcommand}\nAvailable: time, info, ticker, ticker-24hr, depth, trades, klines, candles, book-ticker, mark-price, funding-rate, funding-rate-history, open-interest, index, contract-ticker, contract-ticker-price, long-short-ratio, insurance-fund, risk-limits\n`);
+      process.stdout.write(
+        `Unknown market subcommand: ${cli.subcommand}\nAvailable: products, assets, tickers, ticker, orderbook, depth, trades, candles, indices, settlement\n`,
+      );
       return;
   }
 

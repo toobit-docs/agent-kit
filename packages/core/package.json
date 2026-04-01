@@ -1,5 +1,5 @@
 {
-  "name": "@toobit_agent/agent-toobitkit-core",
+  "name": "@delta_agent/agent-deltakit-core",
   "version": "1.0.0",
   "type": "module",
   "exports": {

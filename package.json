@@ -1,10 +1,10 @@
 {
-  "name": "toobit-hub",
+  "name": "delta-hub",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @toobit_agent/agent-toobitkit-core build && pnpm --filter toobit-trade-mcp build && pnpm --filter toobit-trade-cli build",
+    "build": "pnpm --filter @delta_agent/agent-deltakit-core build && pnpm --filter delta-trade-mcp build && pnpm --filter delta-trade-cli build",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean",
     "test": "pnpm -r test"

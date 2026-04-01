@@ -16,6 +16,11 @@ export function parseCli(argv = process.argv.slice(2)): CliParsed {
     "quantity", "price", "orderId", "clientOrderId", "leverage",
     "orderType", "tokenId", "instId", "period", "bar",
     "startTime", "endTime", "marginType",
+    // Delta Exchange specific
+    "productId", "productSymbol", "size", "limitPrice", "orderType",
+    "resolution", "id", "timeInForce", "contractTypes", "underlyingAssets",
+    "state", "deltaMargin", "assetId", "transactionType", "amount",
+    "subaccountUserId", "transferType", "asset",
   ]);
 
   let command = "help";
@@ -62,6 +67,25 @@ export function parseCli(argv = process.argv.slice(2)): CliParsed {
       startTime: { type: "string" },
       endTime: { type: "string" },
       marginType: { type: "string" },
+      // Delta Exchange specific
+      productId: { type: "string" },
+      productSymbol: { type: "string" },
+      size: { type: "string" },
+      limitPrice: { type: "string" },
+      resolution: { type: "string" },
+      id: { type: "string" },
+      timeInForce: { type: "string" },
+      contractTypes: { type: "string" },
+      underlyingAssets: { type: "string" },
+      state: { type: "string" },
+      deltaMargin: { type: "string" },
+      assetId: { type: "string" },
+      transactionType: { type: "string" },
+      amount: { type: "string" },
+      subaccountUserId: { type: "string" },
+      transferType: { type: "string" },
+      asset: { type: "string" },
+      reduceOnly: { type: "boolean", default: false },
     },
     strict: false,
     allowPositionals: true,

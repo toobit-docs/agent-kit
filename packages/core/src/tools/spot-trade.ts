@@ -6,100 +6,48 @@ function normalize(response: { endpoint: string; requestTime: string; data: unkn
   return { endpoint: response.endpoint, requestTime: response.requestTime, data: response.data };
 }
 
+/**
+ * Spot trading tools for Delta Exchange.
+ * Delta Exchange supports spot products (contract_type = "spot") such as BTC/USDT, ETH/USDT,
+ * SOL/USDT, DETO/USDT, and USDC/USDT. Spot orders use the same /v2/orders endpoint as futures —
+ * just reference the spot product_id or product_symbol.
+ */
 export function registerSpotTradeTools(): ToolSpec[] {
   return [
     {
       name: "spot_place_order",
       module: "spot",
-      description: "Place a spot order (LIMIT, MARKET, LIMIT_MAKER). [CAUTION] Executes real trades. Private endpoint. Rate limit: 50 req/s.",
+      description: "Place a spot order on Delta Exchange (limit_order or market_order). Use product_id or product_symbol to specify the spot pair (e.g. BTCUSDT_SP). [CAUTION] Executes real trades. Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
-          side: { type: "string", enum: ["BUY", "SELL"] },
-          type: { type: "string", enum: ["LIMIT", "MARKET", "LIMIT_MAKER"], description: "Order type" },
-          quantity: { type: "string", description: "For LIMIT/LIMIT_MAKER: base asset quantity (e.g. 0.001 BTC). For MARKET SELL: base asset quantity to sell. For MARKET BUY: quote asset amount to spend (e.g. 50 means spend 50 USDT)." },
-          price: { type: "string", description: "Order price (required for LIMIT)" },
-          newClientOrderId: { type: "string", description: "Client order ID. Only [a-zA-Z0-9_\\-.]  allowed; other characters are stripped." },
-          timeInForce: { type: "string", enum: ["GTC", "IOC", "FOK"], description: "Default GTC" },
+          product_id: { type: "number", description: "Spot product ID (use market_get_products with contract_types=spot to look up)" },
+          product_symbol: { type: "string", description: "Spot product symbol, e.g. BTCUSDT_SP" },
+          side: { type: "string", enum: ["buy", "sell"] },
+          order_type: { type: "string", enum: ["limit_order", "market_order"], description: "Order type" },
+          size: { type: "number", description: "Order quantity" },
+          limit_price: { type: "string", description: "Limit price (required for limit_order)" },
+          client_order_id: { type: "string", description: "Optional client order ID" },
+          time_in_force: { type: "string", enum: ["gtc", "ioc", "fok"], description: "Time in force (default: gtc)" },
         },
-        required: ["symbol", "side", "type", "quantity"],
+        required: ["side", "order_type", "size"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privatePost(
-          "/api/v1/spot/order",
+          "/v2/orders",
           compactObject({
-            symbol: requireString(args, "symbol"),
+            product_id: readNumber(args, "product_id"),
+            product_symbol: readString(args, "product_symbol"),
             side: requireString(args, "side"),
-            type: requireString(args, "type"),
-            quantity: requireString(args, "quantity"),
-            price: readString(args, "price"),
-            newClientOrderId: readString(args, "newClientOrderId")?.replace(/[^a-zA-Z0-9_\-\.]/g, ""),
-            timeInForce: readString(args, "timeInForce"),
+            order_type: requireString(args, "order_type"),
+            size: readNumber(args, "size"),
+            limit_price: readString(args, "limit_price"),
+            client_order_id: readString(args, "client_order_id"),
+            time_in_force: readString(args, "time_in_force"),
           }),
-          privateRateLimit("spot_place_order", 50),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "spot_place_order_test",
-      module: "spot",
-      description: "Test spot order placement without actually submitting. Private endpoint. Rate limit: 50 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT" },
-          side: { type: "string", enum: ["BUY", "SELL"] },
-          type: { type: "string", enum: ["LIMIT", "MARKET", "LIMIT_MAKER"] },
-          quantity: { type: "string" },
-          price: { type: "string" },
-        },
-        required: ["symbol", "side", "type", "quantity"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/spot/orderTest",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            side: requireString(args, "side"),
-            type: requireString(args, "type"),
-            quantity: requireString(args, "quantity"),
-            price: readString(args, "price"),
-          }),
-          privateRateLimit("spot_place_order_test", 50),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "spot_batch_orders",
-      module: "spot",
-      description: "[CAUTION] Batch place spot orders. Private endpoint. Rate limit: 50 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          orders: {
-            type: "array",
-            description: "Array of orders: [{symbol, side, type, quantity, price?, newClientOrderId?, timeInForce?}]",
-            items: { type: "object" },
-          },
-        },
-        required: ["orders"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const orders = args.orders;
-        if (!Array.isArray(orders) || orders.length === 0) throw new Error("orders must be a non-empty array.");
-        const response = await context.client.privatePost(
-          "/api/v1/spot/batchOrders",
-          orders as Record<string, unknown>[],
-          privateRateLimit("spot_batch_orders", 50),
+          privateRateLimit("spot_place_order", 20),
         );
         return normalize(response);
       },
@@ -107,89 +55,83 @@ export function registerSpotTradeTools(): ToolSpec[] {
     {
       name: "spot_cancel_order",
       module: "spot",
-      description: "Cancel a spot order by orderId or clientOrderId. Private endpoint. Rate limit: 50 req/s.",
+      description: "Cancel an open spot order by order ID. Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          orderId: { type: "string", description: "Order ID" },
-          clientOrderId: { type: "string", description: "Client order ID" },
+          id: { type: "number", description: "Order ID" },
+          product_id: { type: "number", description: "Product ID of the spot pair" },
         },
+        required: ["id", "product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateDelete(
-          "/api/v1/spot/order",
+          "/v2/orders",
           compactObject({
-            orderId: readString(args, "orderId"),
-            clientOrderId: readString(args, "clientOrderId"),
+            id: readNumber(args, "id"),
+            product_id: readNumber(args, "product_id"),
           }),
-          privateRateLimit("spot_cancel_order", 50),
+          privateRateLimit("spot_cancel_order", 20),
         );
         return normalize(response);
       },
     },
     {
-      name: "spot_cancel_open_orders",
+      name: "spot_batch_cancel_orders",
       module: "spot",
-      description: "Cancel all open spot orders for a symbol. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
+      description: "Cancel all open spot orders for a product. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "e.g. BTCUSDT. Omit for all symbols." },
+          product_id: { type: "number", description: "Spot product ID" },
+          cancel_limit_orders: { type: "boolean", description: "Cancel limit orders (default true)" },
+          cancel_stop_orders: { type: "boolean", description: "Cancel stop orders (default true)" },
         },
+        required: ["product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateDelete(
-          "/api/v1/spot/openOrders",
-          compactObject({ symbol: readString(args, "symbol") }),
-          privateRateLimit("spot_cancel_open_orders", 10),
+          "/v2/orders/all",
+          compactObject({
+            product_id: readNumber(args, "product_id"),
+            cancel_limit_orders: args.cancel_limit_orders,
+            cancel_stop_orders: args.cancel_stop_orders,
+          }),
+          privateRateLimit("spot_batch_cancel_orders", 10),
         );
         return normalize(response);
       },
     },
     {
-      name: "spot_cancel_order_by_ids",
+      name: "spot_amend_order",
       module: "spot",
-      description: "Batch cancel spot orders by IDs. [CAUTION] Private endpoint. Rate limit: 50 req/s.",
+      description: "Amend an open spot order (price or size). Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          orderIds: { type: "string", description: "Comma-separated order IDs" },
+          id: { type: "number", description: "Order ID" },
+          product_id: { type: "number", description: "Spot product ID" },
+          limit_price: { type: "string", description: "New limit price" },
+          size: { type: "number", description: "New order size" },
         },
-        required: ["orderIds"],
+        required: ["id", "product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
-        const response = await context.client.privateDelete(
-          "/api/v1/spot/cancelOrderByIds",
-          { orderIds: requireString(args, "orderIds") },
-          privateRateLimit("spot_cancel_order_by_ids", 50),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "spot_get_order",
-      module: "spot",
-      description: "Get details of a single spot order. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          orderId: { type: "string" },
-          clientOrderId: { type: "string" },
-        },
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/spot/order",
-          compactObject({ orderId: readString(args, "orderId"), clientOrderId: readString(args, "clientOrderId") }),
-          privateRateLimit("spot_get_order", 20),
+        const response = await context.client.privatePut(
+          "/v2/orders",
+          compactObject({
+            id: readNumber(args, "id"),
+            product_id: readNumber(args, "product_id"),
+            limit_price: readString(args, "limit_price"),
+            size: readNumber(args, "size"),
+          }),
+          privateRateLimit("spot_amend_order", 20),
         );
         return normalize(response);
       },
@@ -197,53 +139,54 @@ export function registerSpotTradeTools(): ToolSpec[] {
     {
       name: "spot_get_open_orders",
       module: "spot",
-      description: "Get current open spot orders. Private endpoint. Rate limit: 20 req/s.",
+      description: "Get current open spot orders, optionally filtered by product. Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
-          orderId: { type: "string", description: "Filter orders >= this ID" },
-          limit: { type: "number", description: "Default 500, max 1000" },
+          product_id: { type: "number", description: "Filter by spot product ID" },
+          page_size: { type: "number", description: "Results per page" },
+          after: { type: "string", description: "Cursor for next page" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/spot/openOrders",
-          compactObject({ symbol: readString(args, "symbol"), orderId: readString(args, "orderId"), limit: readNumber(args, "limit") }),
+          "/v2/orders",
+          compactObject({
+            product_id: readNumber(args, "product_id"),
+            state: "open",
+            page_size: readNumber(args, "page_size"),
+            after: readString(args, "after"),
+          }),
           privateRateLimit("spot_get_open_orders", 20),
         );
         return normalize(response);
       },
     },
     {
-      name: "spot_get_trade_orders",
+      name: "spot_get_order_history",
       module: "spot",
-      description: "Get all spot orders (history). Private endpoint. Rate limit: 20 req/s.",
+      description: "Get spot order history (filled, cancelled, closed). Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
-          orderId: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          limit: { type: "number", description: "Default 500, max 1000" },
+          product_id: { type: "number", description: "Filter by spot product ID" },
+          page_size: { type: "number" },
+          after: { type: "string", description: "Cursor for next page" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/spot/tradeOrders",
+          "/v2/orders/history",
           compactObject({
-            symbol: readString(args, "symbol"),
-            orderId: readString(args, "orderId"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            product_id: readNumber(args, "product_id"),
+            page_size: readNumber(args, "page_size"),
+            after: readString(args, "after"),
           }),
-          privateRateLimit("spot_get_trade_orders", 20),
+          privateRateLimit("spot_get_order_history", 20),
         );
         return normalize(response);
       },
@@ -251,30 +194,28 @@ export function registerSpotTradeTools(): ToolSpec[] {
     {
       name: "spot_get_fills",
       module: "spot",
-      description: "Get spot trade history (fills). Private endpoint. Rate limit: 20 req/s.",
+      description: "Get spot trade fills (individual executions). Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
-          fromId: { type: "string" },
-          toId: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          limit: { type: "number", description: "Default 500, max 1000" },
+          product_id: { type: "number", description: "Filter by spot product ID" },
+          start_time: { type: "number", description: "Start time as Unix timestamp (seconds)" },
+          end_time: { type: "number", description: "End time as Unix timestamp (seconds)" },
+          page_size: { type: "number" },
+          after: { type: "string", description: "Cursor for next page" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/account/trades",
+          "/v2/fills",
           compactObject({
-            symbol: readString(args, "symbol"),
-            fromId: readString(args, "fromId"),
-            toId: readString(args, "toId"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            product_id: readNumber(args, "product_id"),
+            start_time: readNumber(args, "start_time"),
+            end_time: readNumber(args, "end_time"),
+            page_size: readNumber(args, "page_size"),
+            after: readString(args, "after"),
           }),
           privateRateLimit("spot_get_fills", 20),
         );

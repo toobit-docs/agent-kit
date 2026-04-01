@@ -9,14 +9,14 @@ import {
   SUPPORTED_CLIENTS,
   configFilePath,
   ConfigWatcher,
-} from "@toobit_agent/agent-toobitkit-core";
-import type { LogLevel, ClientId } from "@toobit_agent/agent-toobitkit-core";
+} from "@delta_agent/agent-deltakit-core";
+import type { LogLevel, ClientId } from "@delta_agent/agent-deltakit-core";
 import { SERVER_NAME, SERVER_VERSION } from "./constants.js";
 import { createServer } from "./server.js";
 
 function printHelp(): void {
   const help = `
-Usage: toobit-trade-mcp [options]
+Usage: delta-trade-mcp [options]
 
 Options:
   --modules <list>     Comma-separated list of modules to load
@@ -33,12 +33,12 @@ Options:
   --version            Show version
 
 Credentials (priority: env vars > ${configFilePath()} > none):
-  TOOBIT_API_KEY       Toobit API key
-  TOOBIT_SECRET_KEY    Toobit secret key
+  DELTA_API_KEY        Delta Exchange API key
+  DELTA_SECRET_KEY     Delta Exchange secret key
 
 Other Environment Variables:
-  TOOBIT_API_BASE_URL  Optional API base URL override
-  TOOBIT_TIMEOUT_MS    Optional request timeout in milliseconds (default: 15000)
+  DELTA_API_BASE_URL   Optional API base URL override
+  DELTA_TIMEOUT_MS     Optional request timeout in milliseconds (default: 15000)
 `;
   process.stdout.write(help);
 }

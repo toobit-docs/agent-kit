@@ -11,54 +11,39 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_place_order",
       module: "futures",
-      description: "Place a USDT-M futures order. For market orders, set orderType to MARKET — the handler automatically converts to type=LIMIT + priceType=MARKET as required by Toobit API. Leverage must be set separately via futures_set_leverage before placing orders. [CAUTION] Executes real trades. Private endpoint. Rate limit: 20 req/s.",
+      description: "Place a futures order (perpetual or dated) on Delta Exchange. Use product_id or product_symbol to specify the contract (e.g. BTCUSD for BTC perpetual). To open a long: side=buy, reduce_only=false. To close a long: side=sell, reduce_only=true. [CAUTION] Executes real trades. Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
-          side: { type: "string", enum: ["BUY_OPEN", "SELL_OPEN", "BUY_CLOSE", "SELL_CLOSE"] },
-          orderType: { type: "string", enum: ["LIMIT", "MARKET", "STOP"], description: "LIMIT=limit order, MARKET=market order (auto-converted), STOP=conditional order" },
-          quantity: { type: "string", description: "Order quantity (contracts)" },
-          price: { type: "string", description: "Required for LIMIT orders with priceType=INPUT" },
-          leverage: { type: "string", description: "IGNORED by place-order API. Use futures_set_leverage to set leverage before placing orders." },
-          newClientOrderId: { type: "string", description: "Unique client order ID. Auto-generated if omitted. Only [a-zA-Z0-9_\\-.]  allowed; other characters are stripped." },
-          priceType: { type: "string", enum: ["INPUT", "OPPONENT", "QUEUE", "OVER", "MARKET"], description: "Price type. INPUT=specified price, MARKET=market price" },
-          stopPrice: { type: "string", description: "Trigger price for STOP orders" },
-          timeInForce: { type: "string", enum: ["GTC", "IOC", "FOK"] },
+          product_id: { type: "number", description: "Product ID (use market_get_products to look up)" },
+          product_symbol: { type: "string", description: "Product symbol, e.g. BTCUSD for BTC perpetual" },
+          side: { type: "string", enum: ["buy", "sell"] },
+          order_type: { type: "string", enum: ["limit_order", "market_order", "stop_order"], description: "Order type" },
+          size: { type: "number", description: "Order quantity (number of contracts)" },
+          limit_price: { type: "string", description: "Limit price (required for limit_order)" },
+          reduce_only: { type: "boolean", description: "true=close/reduce position, false=open/increase position" },
+          stop_price: { type: "string", description: "Trigger price for stop_order" },
+          time_in_force: { type: "string", enum: ["gtc", "ioc", "fok"], description: "Time in force (default: gtc)" },
+          client_order_id: { type: "string", description: "Optional client order ID" },
         },
-        required: ["symbol", "side", "orderType", "quantity"],
+        required: ["side", "order_type", "size"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
-        let orderType = requireString(args, "orderType");
-        let priceType = readString(args, "priceType");
-
-        if (orderType === "MARKET") {
-          orderType = "LIMIT";
-          priceType = "MARKET";
-        } else if (orderType === "LIMIT" && priceType === "MARKET") {
-          throw new Error(
-            'Conflicting parameters: orderType="LIMIT" with priceType="MARKET" would execute at market price, ignoring your limit price. '
-            + 'Use orderType="MARKET" for market orders, or remove priceType for limit orders.',
-          );
-        }
-
-        const rawClientId = readString(args, "newClientOrderId");
-        const clientId = rawClientId ? rawClientId.replace(/[^a-zA-Z0-9_\-\.]/g, "") : `mcp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
         const response = await context.client.privatePost(
-          "/api/v1/futures/order",
+          "/v2/orders",
           compactObject({
-            symbol: requireString(args, "symbol"),
+            product_id: readNumber(args, "product_id"),
+            product_symbol: readString(args, "product_symbol"),
             side: requireString(args, "side"),
-            type: orderType,
-            quantity: requireString(args, "quantity"),
-            price: readString(args, "price"),
-            newClientOrderId: clientId,
-            priceType,
-            stopPrice: readString(args, "stopPrice"),
-            timeInForce: readString(args, "timeInForce"),
+            order_type: requireString(args, "order_type"),
+            size: readNumber(args, "size"),
+            limit_price: readString(args, "limit_price"),
+            reduce_only: args.reduce_only,
+            stop_price: readString(args, "stop_price"),
+            time_in_force: readString(args, "time_in_force"),
+            client_order_id: readString(args, "client_order_id"),
           }),
           privateRateLimit("futures_place_order", 20),
         );
@@ -66,16 +51,60 @@ export function registerFuturesTools(): ToolSpec[] {
       },
     },
     {
+      name: "futures_place_bracket_order",
+      module: "futures",
+      description: "Place a bracket order (entry + stop-loss + take-profit in one request). [CAUTION] Executes real trades. Private endpoint. Rate limit: 10 req/s.",
+      isWrite: true,
+      inputSchema: {
+        type: "object",
+        properties: {
+          product_id: { type: "number", description: "Product ID" },
+          product_symbol: { type: "string", description: "Product symbol, e.g. BTCUSD" },
+          side: { type: "string", enum: ["buy", "sell"] },
+          size: { type: "number", description: "Order quantity" },
+          limit_price: { type: "string", description: "Entry limit price" },
+          order_type: { type: "string", enum: ["limit_order", "market_order"] },
+          stop_loss_order: {
+            type: "object",
+            description: "Stop-loss: {order_type, stop_price, limit_price?}",
+          },
+          take_profit_order: {
+            type: "object",
+            description: "Take-profit: {order_type, stop_price, limit_price?}",
+          },
+        },
+        required: ["side", "size", "order_type"],
+      },
+      handler: async (rawArgs, context) => {
+        const args = asRecord(rawArgs);
+        const response = await context.client.privatePost(
+          "/v2/orders/bracket",
+          compactObject({
+            product_id: readNumber(args, "product_id"),
+            product_symbol: readString(args, "product_symbol"),
+            side: requireString(args, "side"),
+            size: readNumber(args, "size"),
+            limit_price: readString(args, "limit_price"),
+            order_type: requireString(args, "order_type"),
+            stop_loss_order: args.stop_loss_order,
+            take_profit_order: args.take_profit_order,
+          }),
+          privateRateLimit("futures_place_bracket_order", 10),
+        );
+        return normalize(response);
+      },
+    },
+    {
       name: "futures_batch_orders",
       module: "futures",
-      description: "[CAUTION] Batch place futures orders. Private endpoint. Rate limit: 20 req/s.",
+      description: "[CAUTION] Batch place up to 50 futures orders in a single request. All orders must be for the same product. Private endpoint. Rate limit: 10 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
           orders: {
             type: "array",
-            description: "Array of order objects",
+            description: "Array of order objects (max 50). Each: {product_id or product_symbol, side, order_type, size, limit_price?, reduce_only?}",
             items: { type: "object" },
           },
         },
@@ -85,10 +114,11 @@ export function registerFuturesTools(): ToolSpec[] {
         const args = asRecord(rawArgs);
         const orders = args.orders;
         if (!Array.isArray(orders) || orders.length === 0) throw new Error("orders must be a non-empty array.");
+        if (orders.length > 50) throw new Error("Batch orders are limited to 50 per request.");
         const response = await context.client.privatePost(
-          "/api/v1/futures/batchOrders",
+          "/v2/orders/batch",
           orders as Record<string, unknown>[],
-          privateRateLimit("futures_batch_orders", 20),
+          privateRateLimit("futures_batch_orders", 10),
         );
         return normalize(response);
       },
@@ -96,24 +126,23 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_cancel_order",
       module: "futures",
-      description: "Cancel a futures order. Private endpoint. Rate limit: 20 req/s.",
+      description: "Cancel an open futures order by order ID. Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          orderId: { type: "string" },
-          clientOrderId: { type: "string" },
-          orderType: { type: "string", description: "LIMIT or condition type" },
+          id: { type: "number", description: "Order ID" },
+          product_id: { type: "number", description: "Product ID of the futures contract" },
         },
+        required: ["id", "product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateDelete(
-          "/api/v1/futures/order",
+          "/v2/orders",
           compactObject({
-            orderId: readString(args, "orderId"),
-            clientOrderId: readString(args, "clientOrderId"),
-            orderType: readString(args, "orderType"),
+            id: readNumber(args, "id"),
+            product_id: readNumber(args, "product_id"),
           }),
           privateRateLimit("futures_cancel_order", 20),
         );
@@ -123,43 +152,55 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_cancel_all_orders",
       module: "futures",
-      description: "Cancel all futures open orders for a symbol. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
+      description: "Cancel all open futures orders for a product. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
+          product_id: { type: "number", description: "Futures product ID" },
+          cancel_limit_orders: { type: "boolean", description: "Cancel limit orders (default true)" },
+          cancel_stop_orders: { type: "boolean", description: "Cancel stop orders (default true)" },
         },
-        required: ["symbol"],
+        required: ["product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateDelete(
-          "/api/v1/futures/batchOrders",
-          { symbol: requireString(args, "symbol") },
+          "/v2/orders/all",
+          compactObject({
+            product_id: readNumber(args, "product_id"),
+            cancel_limit_orders: args.cancel_limit_orders,
+            cancel_stop_orders: args.cancel_stop_orders,
+          }),
           privateRateLimit("futures_cancel_all_orders", 10),
         );
         return normalize(response);
       },
     },
     {
-      name: "futures_cancel_order_by_ids",
+      name: "futures_batch_cancel_orders",
       module: "futures",
-      description: "Batch cancel futures orders by IDs. Private endpoint. Rate limit: 20 req/s.",
+      description: "Batch cancel up to 50 futures orders by ID. Private endpoint. Rate limit: 10 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          orderIds: { type: "string", description: "Comma-separated order IDs" },
+          orders: {
+            type: "array",
+            description: "Array of cancel objects: [{id, product_id}]",
+            items: { type: "object" },
+          },
         },
-        required: ["orderIds"],
+        required: ["orders"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
+        const orders = args.orders;
+        if (!Array.isArray(orders) || orders.length === 0) throw new Error("orders must be a non-empty array.");
         const response = await context.client.privateDelete(
-          "/api/v1/futures/cancelOrderByIds",
-          { orderIds: requireString(args, "orderIds") },
-          privateRateLimit("futures_cancel_order_by_ids", 20),
+          "/v2/orders/batch",
+          orders as Record<string, unknown>[],
+          privateRateLimit("futures_batch_cancel_orders", 10),
         );
         return normalize(response);
       },
@@ -167,27 +208,27 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_amend_order",
       module: "futures",
-      description: "Modify a futures order (price/quantity). Requires the order type. Private endpoint. Rate limit: 20 req/s.",
+      description: "Amend an open futures order (price or size). Private endpoint. Rate limit: 20 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          orderId: { type: "string" },
-          type: { type: "string", enum: ["LIMIT", "STOP", "STOP_PROFIT_LOSS"], description: "Order type (required by API)" },
-          quantity: { type: "string" },
-          price: { type: "string" },
+          id: { type: "number", description: "Order ID" },
+          product_id: { type: "number", description: "Futures product ID" },
+          limit_price: { type: "string", description: "New limit price" },
+          size: { type: "number", description: "New order size" },
         },
-        required: ["orderId", "type"],
+        required: ["id", "product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/futures/order/update",
+        const response = await context.client.privatePut(
+          "/v2/orders",
           compactObject({
-            orderId: requireString(args, "orderId"),
-            type: requireString(args, "type"),
-            quantity: readString(args, "quantity"),
-            price: readString(args, "price"),
+            id: readNumber(args, "id"),
+            product_id: readNumber(args, "product_id"),
+            limit_price: readString(args, "limit_price"),
+            size: readNumber(args, "size"),
           }),
           privateRateLimit("futures_amend_order", 20),
         );
@@ -195,55 +236,27 @@ export function registerFuturesTools(): ToolSpec[] {
       },
     },
     {
-      name: "futures_get_order",
-      module: "futures",
-      description: "Get details of a single futures order. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          orderId: { type: "string" },
-          clientOrderId: { type: "string" },
-          orderType: { type: "string" },
-        },
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/futures/order",
-          compactObject({
-            orderId: readString(args, "orderId"),
-            clientOrderId: readString(args, "clientOrderId"),
-            orderType: readString(args, "orderType"),
-          }),
-          privateRateLimit("futures_get_order", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
       name: "futures_get_open_orders",
       module: "futures",
-      description: "Get current open futures orders. Private endpoint. Rate limit: 20 req/s.",
+      description: "Get current open futures orders, optionally filtered by product. Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
-          orderId: { type: "string" },
-          orderType: { type: "string" },
-          limit: { type: "number" },
+          product_id: { type: "number", description: "Filter by futures product ID" },
+          page_size: { type: "number" },
+          after: { type: "string", description: "Cursor for next page" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/futures/openOrders",
+          "/v2/orders",
           compactObject({
-            symbol: readString(args, "symbol"),
-            orderId: readString(args, "orderId"),
-            orderType: readString(args, "orderType"),
-            limit: readNumber(args, "limit"),
+            product_id: readNumber(args, "product_id"),
+            state: "open",
+            page_size: readNumber(args, "page_size"),
+            after: readString(args, "after"),
           }),
           privateRateLimit("futures_get_open_orders", 20),
         );
@@ -251,34 +264,28 @@ export function registerFuturesTools(): ToolSpec[] {
       },
     },
     {
-      name: "futures_get_history_orders",
+      name: "futures_get_order_history",
       module: "futures",
-      description: "Get futures order history. Private endpoint. Rate limit: 20 req/s.",
+      description: "Get futures order history (filled, cancelled, closed). Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
-          orderId: { type: "string" },
-          orderType: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          limit: { type: "number" },
+          product_id: { type: "number", description: "Filter by futures product ID" },
+          page_size: { type: "number" },
+          after: { type: "string", description: "Cursor for next page" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/futures/historyOrders",
+          "/v2/orders/history",
           compactObject({
-            symbol: readString(args, "symbol"),
-            orderId: readString(args, "orderId"),
-            orderType: readString(args, "orderType"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            product_id: readNumber(args, "product_id"),
+            page_size: readNumber(args, "page_size"),
+            after: readString(args, "after"),
           }),
-          privateRateLimit("futures_get_history_orders", 20),
+          privateRateLimit("futures_get_order_history", 20),
         );
         return normalize(response);
       },
@@ -286,49 +293,72 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_get_positions",
       module: "futures",
-      description: "Get current futures positions. Private endpoint. Rate limit: 20 req/s.",
+      description: "Get all open futures positions (margined). Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "Omit for all positions" },
+          product_id: { type: "number", description: "Filter by product ID" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/futures/positions",
-          compactObject({ symbol: readString(args, "symbol") }),
+          "/v2/positions/margined",
+          compactObject({ product_id: readNumber(args, "product_id") }),
           privateRateLimit("futures_get_positions", 20),
         );
         return normalize(response);
       },
     },
     {
-      name: "futures_get_history_positions",
+      name: "futures_close_position",
       module: "futures",
-      description: "Get futures closed position history. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
+      description: "Close all open positions for a product (market close). [CAUTION] Private endpoint. Rate limit: 10 req/s.",
+      isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          limit: { type: "number" },
+          product_id: { type: "number", description: "Futures product ID" },
+          size: { type: "number", description: "Quantity to close (omit to close full position)" },
         },
+        required: ["product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/futures/historyPositions",
+        const response = await context.client.privatePost(
+          "/v2/positions/close",
           compactObject({
-            symbol: readString(args, "symbol"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
+            product_id: readNumber(args, "product_id"),
+            size: readNumber(args, "size"),
           }),
-          privateRateLimit("futures_get_history_positions", 20),
+          privateRateLimit("futures_close_position", 10),
+        );
+        return normalize(response);
+      },
+    },
+    {
+      name: "futures_adjust_margin",
+      module: "futures",
+      description: "Add or remove margin from an isolated futures position. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
+      isWrite: true,
+      inputSchema: {
+        type: "object",
+        properties: {
+          product_id: { type: "number", description: "Futures product ID" },
+          delta_margin: { type: "string", description: "Margin to add (positive) or remove (negative), e.g. '100' or '-50'" },
+        },
+        required: ["product_id", "delta_margin"],
+      },
+      handler: async (rawArgs, context) => {
+        const args = asRecord(rawArgs);
+        const response = await context.client.privatePost(
+          "/v2/positions/margin",
+          compactObject({
+            product_id: readNumber(args, "product_id"),
+            delta_margin: requireString(args, "delta_margin"),
+          }),
+          privateRateLimit("futures_adjust_margin", 10),
         );
         return normalize(response);
       },
@@ -336,24 +366,23 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_set_leverage",
       module: "futures",
-      description: "Set leverage for a futures symbol. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
+      description: "Set leverage for a futures product. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
-          leverage: { type: "number", description: "Leverage value, e.g. 10" },
+          product_id: { type: "number", description: "Futures product ID (use market_get_products to look up)" },
+          leverage: { type: "number", description: "Leverage multiplier, e.g. 10" },
         },
-        required: ["symbol", "leverage"],
+        required: ["product_id", "leverage"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
+        const productId = readNumber(args, "product_id");
+        if (!productId) throw new Error("product_id is required.");
         const response = await context.client.privatePost(
-          "/api/v1/futures/leverage",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            leverage: readNumber(args, "leverage"),
-          }),
+          `/v2/products/${productId}/orders/leverage`,
+          { leverage: readNumber(args, "leverage") },
           privateRateLimit("futures_set_leverage", 10),
         );
         return normalize(response);
@@ -362,157 +391,23 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_get_leverage",
       module: "futures",
-      description: "Get current leverage and position mode for a futures symbol. Private endpoint. Rate limit: 20 req/s.",
+      description: "Get current leverage setting for a futures product. Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
+          product_id: { type: "number", description: "Futures product ID" },
         },
-        required: ["symbol"],
+        required: ["product_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
+        const productId = readNumber(args, "product_id");
+        if (!productId) throw new Error("product_id is required.");
         const response = await context.client.privateGet(
-          "/api/v1/futures/accountLeverage",
-          { symbol: requireString(args, "symbol") },
+          `/v2/products/${productId}/orders/leverage`,
+          {},
           privateRateLimit("futures_get_leverage", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_set_margin_type",
-      module: "futures",
-      description: "Switch between cross and isolated margin mode. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
-          marginType: { type: "string", enum: ["CROSS", "ISOLATED"], description: "CROSS=cross margin, ISOLATED=isolated margin" },
-        },
-        required: ["symbol", "marginType"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/futures/marginType",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            marginType: requireString(args, "marginType"),
-          }),
-          privateRateLimit("futures_set_margin_type", 10),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_set_trading_stop",
-      module: "futures",
-      description: "Set take-profit/stop-loss for a futures position. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
-          side: { type: "string", enum: ["LONG", "SHORT"] },
-          takeProfit: { type: "string", description: "Take-profit price" },
-          stopLoss: { type: "string", description: "Stop-loss price" },
-        },
-        required: ["symbol", "side"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/futures/position/trading-stop",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            side: requireString(args, "side"),
-            takeProfit: readString(args, "takeProfit"),
-            stopLoss: readString(args, "stopLoss"),
-          }),
-          privateRateLimit("futures_set_trading_stop", 10),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_flash_close",
-      module: "futures",
-      description: "Flash close a futures position (market close). [CAUTION] Private endpoint. Rate limit: 10 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string" },
-          side: { type: "string", enum: ["LONG", "SHORT"] },
-        },
-        required: ["symbol", "side"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/futures/flashClose",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            side: requireString(args, "side"),
-          }),
-          privateRateLimit("futures_flash_close", 10),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_reverse_position",
-      module: "futures",
-      description: "Reverse a futures position (one-click reverse). [CAUTION] Private endpoint. Rate limit: 10 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string" },
-          side: { type: "string", enum: ["LONG", "SHORT"], description: "Current position side to reverse" },
-        },
-        required: ["symbol", "side"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/futures/reversePosition",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            side: requireString(args, "side"),
-          }),
-          privateRateLimit("futures_reverse_position", 10),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_adjust_margin",
-      module: "futures",
-      description: "Adjust isolated margin for a position. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string" },
-          side: { type: "string", enum: ["LONG", "SHORT"] },
-          amount: { type: "string", description: "Positive=add, negative=reduce" },
-        },
-        required: ["symbol", "side", "amount"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/futures/positionMargin",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            side: requireString(args, "side"),
-            amount: requireString(args, "amount"),
-          }),
-          privateRateLimit("futures_adjust_margin", 10),
         );
         return normalize(response);
       },
@@ -520,28 +415,28 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_get_fills",
       module: "futures",
-      description: "Get futures trade history (fills). Private endpoint. Rate limit: 20 req/s.",
+      description: "Get futures trade fills (individual executions). Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          symbol: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          fromId: { type: "string" },
-          limit: { type: "number" },
+          product_id: { type: "number", description: "Filter by futures product ID" },
+          start_time: { type: "number", description: "Start time as Unix timestamp (seconds)" },
+          end_time: { type: "number", description: "End time as Unix timestamp (seconds)" },
+          page_size: { type: "number" },
+          after: { type: "string", description: "Cursor for next page" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/futures/userTrades",
+          "/v2/fills",
           compactObject({
-            symbol: readString(args, "symbol"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            fromId: readString(args, "fromId"),
-            limit: readNumber(args, "limit"),
+            product_id: readNumber(args, "product_id"),
+            start_time: readNumber(args, "start_time"),
+            end_time: readNumber(args, "end_time"),
+            page_size: readNumber(args, "page_size"),
+            after: readString(args, "after"),
           }),
           privateRateLimit("futures_get_fills", 20),
         );
@@ -551,110 +446,14 @@ export function registerFuturesTools(): ToolSpec[] {
     {
       name: "futures_get_balance",
       module: "futures",
-      description: "Get futures account balance. Private endpoint. Rate limit: 20 req/s.",
+      description: "Get wallet balances for all assets. Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: { type: "object", properties: {} },
       handler: async (_rawArgs, context) => {
         const response = await context.client.privateGet(
-          "/api/v1/futures/balance",
+          "/v2/wallet/balances",
           {},
           privateRateLimit("futures_get_balance", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_get_commission_rate",
-      module: "futures",
-      description: "Get futures commission rate for a symbol. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
-        },
-        required: ["symbol"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/futures/commissionRate",
-          { symbol: requireString(args, "symbol") },
-          privateRateLimit("futures_get_commission_rate", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_get_today_pnl",
-      module: "futures",
-      description: "Get today's realized PnL for futures. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: { type: "object", properties: {} },
-      handler: async (_rawArgs, context) => {
-        const response = await context.client.privateGet(
-          "/api/v1/futures/todayPnl",
-          {},
-          privateRateLimit("futures_get_today_pnl", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_get_balance_flow",
-      module: "futures",
-      description: "Get futures balance flow (ledger). Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          limit: { type: "number" },
-          fromId: { type: "string" },
-        },
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/futures/balanceFlow",
-          compactObject({
-            symbol: readString(args, "symbol"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
-            fromId: readString(args, "fromId"),
-          }),
-          privateRateLimit("futures_get_balance_flow", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "futures_auto_add_margin",
-      module: "futures",
-      description: "Enable/disable auto add margin for isolated positions. [CAUTION] Private endpoint. Rate limit: 10 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          symbol: { type: "string", description: "Futures contract symbol, e.g. BTC-SWAP-USDT" },
-          side: { type: "string", enum: ["LONG", "SHORT"] },
-          enable: { type: "string", enum: ["ON", "OFF"], description: "ON=enable, OFF=disable" },
-        },
-        required: ["symbol", "side", "enable"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/futures/autoAddMargin",
-          compactObject({
-            symbol: requireString(args, "symbol"),
-            side: requireString(args, "side"),
-            enable: requireString(args, "enable"),
-          }),
-          privateRateLimit("futures_auto_add_margin", 10),
         );
         return normalize(response);
       },

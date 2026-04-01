@@ -1,6 +1,6 @@
-# Toobit Agent Trade Kit
+# Delta Exchange Agent Trade Kit
 
-**The official toolkit for AI agents to trade on Toobit.**
+**The official toolkit for AI agents to trade on Delta Exchange.**
 
 Trade with natural language — from market queries to order execution. Built-in MCP Server + CLI, fully open-source, runs locally, your keys never leave your device.
 
@@ -8,39 +8,36 @@ Trade with natural language — from market queries to order execution. Built-in
 
 | Module | Capabilities | Tools |
 |--------|-------------|-------|
-| **Market** | Real-time ticker, depth, klines, mark price, funding rate, open interest, index | 21 |
-| **Spot** | Place/cancel orders, batch operations, order queries, trade history | 10 |
-| **Futures** | USDT-M perpetual, leverage, close position, TP/SL, flash close, reverse | 25 |
-| **Account** | Balance, deposit/withdraw, sub-accounts, transfer, flow, API key check | 10 |
+| **Market** | Products, assets, tickers, order book, trades, candles, indices, settlement prices | 9 |
+| **Spot** | Place/cancel/amend orders, batch cancel, open orders, history, fills | 7 |
+| **Futures** | Perpetuals & dated futures, leverage, bracket orders, batch ops, positions, margin | 16 |
+| **Account** | Profile, wallet balances, transactions, transfer, rate-limit quota | 5 |
 
-**Total: 66+ MCP tools**
+**Total: 37+ MCP tools**
 
 ## Usage Modes
 
-### 1. MCP Server (`toobit-trade-mcp`)
+### 1. MCP Server (`delta-trade-mcp`)
 Connect to Claude, Cursor, VS Code, or any MCP-compatible AI client.
 
-### 2. CLI (`toobit-trade-cli`)
+### 2. CLI (`delta-trade-cli`)
 Trade directly from the terminal. Supports piping, cron jobs, and scripting.
-
-### 3. Skills
-Plug-and-play modules for AI clients that support the Skills protocol. See [agent-skills](https://github.com/toobit-docs/agent-skills).
 
 ## Quick Start
 
 ### Install
 
 ```bash
-npm install -g toobit-trade-mcp toobit-trade-cli
+npm install -g delta-trade-mcp delta-trade-cli
 ```
 
 ### Configure Credentials
 
 ```bash
-toobit config init
+delta config init
 ```
 
-Or manually create `~/.toobit/config.toml`:
+Or manually create `~/.delta/config.toml`:
 
 ```toml
 default_profile = "live"
@@ -50,12 +47,12 @@ api_key    = "your-api-key"
 secret_key = "your-secret-key"
 ```
 
-**Get API Key:** [Toobit API Key Creation Guide](https://www.toobit.com/en-US/support/toobit-api-key-creation-guide)
+**Get API Key:** [Delta Exchange API Documentation](https://docs.delta.exchange)
 
 ### Connect AI Client
 
 ```bash
-toobit-trade-mcp setup --client <client>
+delta-trade-mcp setup --client <client>
 ```
 
 | Client | `<client>` value |
@@ -70,19 +67,20 @@ toobit-trade-mcp setup --client <client>
 
 ```bash
 # Market data (no API key needed)
-toobit market ticker --symbol BTCUSDT
-toobit market candles --symbol BTCUSDT --interval 1h --limit 10
-toobit market funding-rate --symbol BTC-SWAP-USDT
+delta market ticker --symbol BTCUSDT_PERP
+delta market candles --symbol BTCUSDT_PERP --resolution 1h
+delta market orderbook --symbol BTCUSDT_PERP
 
-# Spot trading
-toobit spot place --symbol BTCUSDT --side BUY --type MARKET --quantity 0.001
+# Spot trading (use spot product symbols, e.g. BTCUSDT_SP)
+delta spot place --product-symbol BTCUSDT_SP --side buy --order-type market_order --size 0.001
 
-# Futures trading (use contract symbol format: BTC-SWAP-USDT)
-toobit futures place --symbol BTC-SWAP-USDT --side BUY_OPEN --orderType MARKET --quantity 1 --leverage 10
-toobit futures positions
+# Futures trading
+delta futures place --product-symbol BTCUSDT_PERP --side buy --order-type market_order --size 1
+delta futures positions
+delta futures leverage --product-id 84 --leverage 10
 
 # Account
-toobit account balance
+delta account balance
 ```
 
 ## MCP Server
@@ -91,143 +89,122 @@ toobit account balance
 
 | Scenario | Command |
 |----------|---------|
-| Market data only (no key) | `toobit-trade-mcp --modules market` |
-| Full access | `toobit-trade-mcp --modules all` |
-| Read-only monitoring | `toobit-trade-mcp --read-only` |
-| Spot only | `toobit-trade-mcp --modules market,spot` |
-| Futures only | `toobit-trade-mcp --modules market,futures` |
+| Market data only (no key) | `delta-trade-mcp --modules market` |
+| Full access | `delta-trade-mcp --modules all` |
+| Read-only monitoring | `delta-trade-mcp --read-only` |
+| Spot only | `delta-trade-mcp --modules market,spot` |
+| Futures only | `delta-trade-mcp --modules market,futures` |
 
 ### Tool List
 
 <details>
-<summary><b>market — Market Data (21 tools, public)</b></summary>
+<summary><b>market — Market Data (9 tools, public)</b></summary>
 
 | Tool | Description |
 |------|-------------|
-| `market_get_server_time` | Server time |
-| `market_get_exchange_info` | Trading rules & symbols |
-| `market_get_depth` | Order book depth |
-| `market_get_merged_depth` | Merged depth |
-| `market_get_trades` | Recent trades |
-| `market_get_klines` | Candlestick data |
-| `market_get_ticker_24hr` | 24h spot ticker |
-| `market_get_ticker_price` | Latest price |
-| `market_get_book_ticker` | Best bid/ask |
-| `market_get_index_klines` | Index klines |
-| `market_get_mark_price` | Mark price |
-| `market_get_mark_price_klines` | Mark price klines |
-| `market_get_funding_rate` | Current funding rate |
-| `market_get_funding_rate_history` | Funding rate history |
-| `market_get_open_interest` | Open interest |
-| `market_get_long_short_ratio` | Long/short ratio |
-| `market_get_contract_ticker_24hr` | 24h futures ticker |
-| `market_get_contract_ticker_price` | Futures latest price |
-| `market_get_index_price` | Index price |
-| `market_get_insurance_fund` | Insurance fund |
-| `market_get_risk_limits` | Risk limits |
+| `market_get_products` | List all products/contracts with optional filters |
+| `market_get_assets` | List all supported assets |
+| `market_get_tickers` | Live market data for all or filtered products |
+| `market_get_ticker` | Ticker for a specific product symbol |
+| `market_get_orderbook` | Order book depth for a product |
+| `market_get_trades` | Recent trades for a product |
+| `market_get_candles` | OHLCV candlestick data |
+| `market_get_indices` | Index prices |
+| `market_get_settlement_prices` | Settlement prices |
 
 </details>
 
 <details>
-<summary><b>spot — Spot Trading (10 tools)</b></summary>
+<summary><b>spot — Spot Trading (7 tools)</b></summary>
 
 | Tool | Description |
 |------|-------------|
-| `spot_place_order` | Place spot order |
-| `spot_place_order_test` | Test order |
-| `spot_batch_orders` | Batch orders |
-| `spot_cancel_order` | Cancel order |
-| `spot_cancel_open_orders` | Cancel all open orders |
-| `spot_cancel_order_by_ids` | Cancel by IDs |
-| `spot_get_order` | Query order |
-| `spot_get_open_orders` | Open orders |
-| `spot_get_trade_orders` | Order history |
-| `spot_get_fills` | Trade fills |
+| `spot_place_order` | Place a spot limit or market order |
+| `spot_cancel_order` | Cancel an open spot order |
+| `spot_batch_cancel_orders` | Cancel all open spot orders for a product |
+| `spot_amend_order` | Amend size or price of an open spot order |
+| `spot_get_open_orders` | Query open spot orders |
+| `spot_get_order_history` | Spot order history |
+| `spot_get_fills` | Spot trade fills |
 
 </details>
 
 <details>
-<summary><b>futures — USDT-M Perpetual (25 tools)</b></summary>
+<summary><b>futures — Futures & Perpetuals (16 tools)</b></summary>
 
 | Tool | Description |
 |------|-------------|
-| `futures_place_order` | Place futures order |
-| `futures_batch_orders` | Batch orders |
-| `futures_cancel_order` | Cancel order |
-| `futures_cancel_all_orders` | Cancel all |
-| `futures_cancel_order_by_ids` | Cancel by IDs |
-| `futures_amend_order` | Amend order |
-| `futures_get_order` | Query order |
-| `futures_get_open_orders` | Open orders |
-| `futures_get_history_orders` | Order history |
-| `futures_get_positions` | Current positions |
-| `futures_get_history_positions` | Position history |
-| `futures_set_leverage` | Set leverage |
-| `futures_get_leverage` | Get leverage |
-| `futures_set_margin_type` | Cross/isolated toggle |
-| `futures_set_trading_stop` | Set TP/SL |
-| `futures_flash_close` | Flash close |
-| `futures_reverse_position` | Reverse position |
-| `futures_adjust_margin` | Adjust margin |
-| `futures_get_fills` | Trade fills |
-| `futures_get_balance` | Futures balance |
-| `futures_get_commission_rate` | Commission rate |
-| `futures_get_today_pnl` | Today's PnL |
-| `futures_get_balance_flow` | Balance flow |
-| `futures_auto_add_margin` | Auto add margin |
+| `futures_place_order` | Place a futures order |
+| `futures_place_bracket_order` | Place order with TP/SL bracket |
+| `futures_batch_orders` | Place up to 50 orders in one call |
+| `futures_cancel_order` | Cancel a futures order |
+| `futures_cancel_all_orders` | Cancel all futures orders for a product |
+| `futures_batch_cancel_orders` | Cancel a batch of orders by ID |
+| `futures_amend_order` | Amend a futures order |
+| `futures_get_open_orders` | Query open futures orders |
+| `futures_get_order_history` | Futures order history |
+| `futures_get_positions` | Current open positions |
+| `futures_close_position` | Close a position |
+| `futures_adjust_margin` | Add or remove margin from a position |
+| `futures_set_leverage` | Set leverage for a product |
+| `futures_get_leverage` | Get current leverage setting |
+| `futures_get_fills` | Futures trade fills |
+| `futures_get_balance` | Wallet balances |
 
 </details>
 
 <details>
-<summary><b>account — Account Management (10 tools)</b></summary>
+<summary><b>account — Account Management (5 tools)</b></summary>
 
 | Tool | Description |
 |------|-------------|
-| `account_get_info` | Account info |
-| `account_get_balance_flow` | Balance flow |
-| `account_get_sub_accounts` | Sub-accounts |
-| `account_sub_transfer` | Sub-account transfer |
-| `account_check_api_key` | API key check |
-| `account_withdraw` | Withdraw |
-| `account_get_withdraw_orders` | Withdrawal history |
-| `account_get_deposit_address` | Deposit address |
-| `account_get_deposit_orders` | Deposit history |
-| `trade_get_history` | Audit log |
+| `account_get_info` | Profile and account info |
+| `account_get_wallet_balances` | Wallet balances per asset |
+| `account_get_transactions` | Transaction history |
+| `account_transfer` | Transfer between sub-accounts |
+| `account_get_rate_limit` | Rate limit quota status |
 
 </details>
 
 ## Symbol Format
 
-Toobit uses different symbol formats for spot and futures:
+Delta Exchange uses product symbols for all endpoints:
 
 | Type | Format | Example |
 |------|--------|---------|
-| Spot | `BASEUSDT` | `BTCUSDT`, `ETHUSDT` |
-| Futures | `BASE-SWAP-USDT` | `BTC-SWAP-USDT`, `ETH-SWAP-USDT` |
+| Spot | `<BASE><QUOTE>_SP` | `BTCUSDT_SP`, `ETHUSDT_SP` |
+| Perpetual Futures | `<BASE><QUOTE>_PERP` or `<BASE>USD_PERP` | `BTCUSDT_PERP`, `ETHUSD_PERP` |
+| Dated Futures | `<BASE>-<DATE>` | `BTC-28MAR25` |
+| Options | `<BASE>-<DATE>-<STRIKE>-<C/P>` | `BTC-28MAR25-80000-C` |
 
-> **Important:** Futures endpoints (funding rate, mark price, open interest, etc.) require the contract symbol format `BTC-SWAP-USDT`. Using spot format `BTCUSDT` will return empty data or errors.
+Use `market_get_products` to look up the exact symbol or `product_id` for any contract.
+
+## Authentication
+
+Delta Exchange uses HMAC-SHA256 authentication:
+- Signature covers: `method + timestamp + path + queryString + body`
+- Timestamp is Unix seconds (not milliseconds)
+- Headers: `api-key`, `timestamp`, `signature`
 
 ## Security
 
-1. **Local execution** — Keys stored locally in `~/.toobit/config.toml`, signatures computed locally
+1. **Local execution** — Keys stored locally in `~/.delta/config.toml`, signatures computed locally
 2. **Config hot-reload** — MCP server automatically detects changes to `config.toml` on every request (via file mtime check). No restart needed after rotating API keys. Invalid configs are rejected and the previous valid config stays active.
 3. **Read-only mode** (`--read-only`) — Data queries only
 4. **Module control** (`--modules`) — Load only the modules you need
-5. **Audit logging** — All calls logged to `~/.toobit/logs/` with auto-redacted parameters
-6. **Input sanitization** — `clientOrderId` uses whitelist `[a-zA-Z0-9_\-.]` to prevent injection attacks
+5. **Audit logging** — All calls logged to `~/.delta/logs/` with auto-redacted parameters
+6. **Input sanitization** — `client_order_id` uses whitelist `[a-zA-Z0-9_\-.]` to prevent injection attacks
 
 > **Security tip:** Never paste your API Key or Secret Key into AI chat. Use sub-account API keys with minimum required permissions.
 
 ## Project Structure
 
 ```
-agent-toobit-kit/
+agent-kit/
 ├── packages/
-│   ├── core/          # Shared core library
-│   ├── mcp/           # toobit-trade-mcp — MCP server
-│   └── cli/           # toobit-trade-cli — CLI tool
-├── docs/
-│   └── landing/       # Landing page
+│   ├── core/          # Shared core library (@delta_agent/agent-deltakit-core)
+│   ├── mcp/           # delta-trade-mcp — MCP server
+│   └── cli/           # delta-trade-cli — CLI tool
 ├── config.toml.example
 └── README.md
 ```
@@ -247,11 +224,8 @@ MIT License
 
 | Service | Status | Notes |
 |---------|--------|-------|
-| **npm publish** | ✅ Done | [toobit-trade-mcp](https://www.npmjs.com/package/toobit-trade-mcp) / [toobit-trade-cli](https://www.npmjs.com/package/toobit-trade-cli) |
+| **npm publish** | 🔜 Planned | `delta-trade-mcp` / `delta-trade-cli` |
 | **Remote MCP** | 🔜 Planned | Currently local stdio only |
-| **Agent Skills** | ✅ Done | [toobit-docs/agent-skills](https://github.com/toobit-docs/agent-skills) |
-| **WebSocket** | 🔜 Planned | Real-time spot/futures data streams |
+| **WebSocket** | 🔜 Planned | Real-time data streams |
 | **Bot strategies** | 🔜 Planned | Grid trading, DCA, etc. |
 | **CI/CD** | 🔜 Planned | GitHub Actions |
-| **Demo trading** | ❌ N/A | Toobit API does not support demo trading |
-| **Options** | ❌ N/A | Toobit does not offer options trading |

@@ -3,7 +3,7 @@ import {
   configFilePath,
   readFullConfig,
   writeFullConfig,
-} from "@toobit_agent/agent-toobitkit-core";
+} from "@delta_agent/agent-deltakit-core";
 import type { CliParsed } from "../parser.js";
 
 function prompt(question: string): Promise<string> {
@@ -19,7 +19,7 @@ function prompt(question: string): Promise<string> {
 export async function handleConfigCommand(cli: CliParsed): Promise<void> {
   switch (cli.subcommand) {
     case "init": {
-      process.stdout.write("Toobit API Configuration Wizard\n\n");
+      process.stdout.write("Delta Exchange API Configuration Wizard\n\n");
       const profileName = (await prompt("Profile name (default: live): ")) || "live";
       const apiKey = await prompt("API Key: ");
       const secretKey = await prompt("Secret Key: ");

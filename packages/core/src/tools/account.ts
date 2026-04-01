@@ -11,12 +11,12 @@ export function registerAccountTools(): ToolSpec[] {
     {
       name: "account_get_info",
       module: "account",
-      description: "Get spot account information (balances for all assets). Private endpoint. Rate limit: 20 req/s.",
+      description: "Get Delta Exchange account information and profile. Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: { type: "object", properties: {} },
       handler: async (_rawArgs, context) => {
         const response = await context.client.privateGet(
-          "/api/v1/account",
+          "/v2/profile",
           {},
           privateRateLimit("account_get_info", 20),
         );
@@ -24,222 +24,100 @@ export function registerAccountTools(): ToolSpec[] {
       },
     },
     {
-      name: "account_get_balance_flow",
+      name: "account_get_wallet_balances",
       module: "account",
-      description: "Get account balance flow (ledger). Private endpoint. Rate limit: 20 req/s.",
+      description: "Get wallet balances for all assets. Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
       inputSchema: {
         type: "object",
         properties: {
-          accountType: { type: "number", description: "1=coin, 2=contract" },
-          tokenId: { type: "string" },
-          fromFlowId: { type: "string" },
-          endFlowId: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          limit: { type: "number" },
+          asset_id: { type: "number", description: "Filter by asset ID (optional)" },
         },
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/account/balanceFlow",
-          compactObject({
-            accountType: readNumber(args, "accountType"),
-            tokenId: readString(args, "tokenId"),
-            fromFlowId: readString(args, "fromFlowId"),
-            endFlowId: readString(args, "endFlowId"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            limit: readNumber(args, "limit"),
-          }),
-          privateRateLimit("account_get_balance_flow", 20),
+          "/v2/wallet/balances",
+          compactObject({ asset_id: readNumber(args, "asset_id") }),
+          privateRateLimit("account_get_wallet_balances", 20),
         );
         return normalize(response);
       },
     },
     {
-      name: "account_get_sub_accounts",
+      name: "account_get_transactions",
       module: "account",
-      description: "Get sub-account list. Private endpoint. Rate limit: 10 req/s.",
+      description: "Get wallet transaction history (deposits, withdrawals, PnL, funding, etc.). Private endpoint. Rate limit: 20 req/s.",
       isWrite: false,
-      inputSchema: { type: "object", properties: {} },
-      handler: async (_rawArgs, context) => {
+      inputSchema: {
+        type: "object",
+        properties: {
+          asset_id: { type: "number", description: "Filter by asset ID" },
+          transaction_type: { type: "string", description: "Filter by type, e.g. deposit, withdrawal, pnl, fee, funding" },
+          start_time: { type: "number", description: "Start time as Unix timestamp (seconds)" },
+          end_time: { type: "number", description: "End time as Unix timestamp (seconds)" },
+          page_size: { type: "number" },
+          after: { type: "string", description: "Cursor for next page" },
+        },
+      },
+      handler: async (rawArgs, context) => {
+        const args = asRecord(rawArgs);
         const response = await context.client.privateGet(
-          "/api/v1/account/subAccount",
-          {},
-          privateRateLimit("account_get_sub_accounts", 10),
+          "/v2/wallet/transactions",
+          compactObject({
+            asset_id: readNumber(args, "asset_id"),
+            transaction_type: readString(args, "transaction_type"),
+            start_time: readNumber(args, "start_time"),
+            end_time: readNumber(args, "end_time"),
+            page_size: readNumber(args, "page_size"),
+            after: readString(args, "after"),
+          }),
+          privateRateLimit("account_get_transactions", 20),
         );
         return normalize(response);
       },
     },
     {
-      name: "account_sub_transfer",
+      name: "account_transfer",
       module: "account",
-      description: "Transfer funds between main and sub accounts. [CAUTION] Private endpoint. Rate limit: 5 req/s.",
+      description: "Transfer funds between subaccounts. [CAUTION] Private endpoint. Rate limit: 5 req/s.",
       isWrite: true,
       inputSchema: {
         type: "object",
         properties: {
-          fromUid: { type: "number", description: "From user ID" },
-          toUid: { type: "number", description: "To user ID" },
-          fromAccountType: { type: "string", enum: ["MAIN", "FUTURES", "COPY_TRADING"], description: "MAIN=spot, FUTURES=contract, COPY_TRADING=copy trading" },
-          toAccountType: { type: "string", enum: ["MAIN", "FUTURES", "COPY_TRADING"], description: "MAIN=spot, FUTURES=contract, COPY_TRADING=copy trading" },
-          asset: { type: "string", description: "Asset name, e.g. USDT" },
-          quantity: { type: "string", description: "Transfer quantity" },
+          asset: { type: "string", description: "Asset symbol, e.g. USDT" },
+          amount: { type: "string", description: "Transfer amount" },
+          transferrer_user_id: { type: "number", description: "From user ID" },
+          transferee_user_id: { type: "number", description: "To user ID" },
         },
-        required: ["fromUid", "toUid", "fromAccountType", "toAccountType", "asset", "quantity"],
+        required: ["asset", "amount", "transferrer_user_id", "transferee_user_id"],
       },
       handler: async (rawArgs, context) => {
         const args = asRecord(rawArgs);
         const response = await context.client.privatePost(
-          "/api/v1/subAccount/transfer",
+          "/v2/wallet/transfer",
           compactObject({
-            fromUid: readNumber(args, "fromUid"),
-            toUid: readNumber(args, "toUid"),
-            fromAccountType: requireString(args, "fromAccountType"),
-            toAccountType: requireString(args, "toAccountType"),
             asset: requireString(args, "asset"),
-            quantity: requireString(args, "quantity"),
+            amount: requireString(args, "amount"),
+            transferrer_user_id: readNumber(args, "transferrer_user_id"),
+            transferee_user_id: readNumber(args, "transferee_user_id"),
           }),
-          privateRateLimit("account_sub_transfer", 5),
+          privateRateLimit("account_transfer", 5),
         );
         return normalize(response);
       },
     },
     {
-      name: "account_check_api_key",
+      name: "account_get_rate_limit",
       module: "account",
-      description: "Check API key type and permissions. Private endpoint. Rate limit: 20 req/s.",
+      description: "Get current API rate limit quota usage. Private endpoint. Rate limit: 10 req/s.",
       isWrite: false,
       inputSchema: { type: "object", properties: {} },
       handler: async (_rawArgs, context) => {
         const response = await context.client.privateGet(
-          "/api/v1/account/checkApiKey",
+          "/v2/rate-limit-quota",
           {},
-          privateRateLimit("account_check_api_key", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "account_withdraw",
-      module: "account",
-      description: "Submit a withdrawal request. [CAUTION] Moves real funds. Private endpoint. Rate limit: 5 req/s.",
-      isWrite: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          tokenId: { type: "string", description: "e.g. USDT" },
-          address: { type: "string" },
-          addressExt: { type: "string", description: "Memo/tag if required" },
-          chainType: { type: "string" },
-          withdrawQuantity: { type: "string" },
-          clientOrderId: { type: "string", description: "Only [a-zA-Z0-9_\\-.]  allowed; other characters are stripped." },
-        },
-        required: ["tokenId", "address", "chainType", "withdrawQuantity"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privatePost(
-          "/api/v1/account/withdraw",
-          compactObject({
-            tokenId: requireString(args, "tokenId"),
-            address: requireString(args, "address"),
-            addressExt: readString(args, "addressExt"),
-            chainType: requireString(args, "chainType"),
-            withdrawQuantity: requireString(args, "withdrawQuantity"),
-            clientOrderId: readString(args, "clientOrderId")?.replace(/[^a-zA-Z0-9_\-\.]/g, ""),
-          }),
-          privateRateLimit("account_withdraw", 5),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "account_get_withdraw_orders",
-      module: "account",
-      description: "Get withdrawal records. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          tokenId: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          fromId: { type: "string" },
-          limit: { type: "number" },
-        },
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/account/withdrawOrders",
-          compactObject({
-            tokenId: readString(args, "tokenId"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            fromId: readString(args, "fromId"),
-            limit: readNumber(args, "limit"),
-          }),
-          privateRateLimit("account_get_withdraw_orders", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "account_get_deposit_address",
-      module: "account",
-      description: "Get deposit address for a token. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          coin: { type: "string", description: "Asset name, e.g. USDT" },
-          chainType: { type: "string", description: "Chain type, e.g. ERC20, TRC20, OMNI" },
-        },
-        required: ["coin", "chainType"],
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/account/deposit/address",
-          compactObject({
-            coin: requireString(args, "coin"),
-            chainType: requireString(args, "chainType"),
-          }),
-          privateRateLimit("account_get_deposit_address", 20),
-        );
-        return normalize(response);
-      },
-    },
-    {
-      name: "account_get_deposit_orders",
-      module: "account",
-      description: "Get deposit records. Private endpoint. Rate limit: 20 req/s.",
-      isWrite: false,
-      inputSchema: {
-        type: "object",
-        properties: {
-          tokenId: { type: "string" },
-          startTime: { type: "number" },
-          endTime: { type: "number" },
-          fromId: { type: "string" },
-          limit: { type: "number" },
-        },
-      },
-      handler: async (rawArgs, context) => {
-        const args = asRecord(rawArgs);
-        const response = await context.client.privateGet(
-          "/api/v1/account/depositOrders",
-          compactObject({
-            tokenId: readString(args, "tokenId"),
-            startTime: readNumber(args, "startTime"),
-            endTime: readNumber(args, "endTime"),
-            fromId: readString(args, "fromId"),
-            limit: readNumber(args, "limit"),
-          }),
-          privateRateLimit("account_get_deposit_orders", 20),
+          privateRateLimit("account_get_rate_limit", 10),
         );
         return normalize(response);
       },

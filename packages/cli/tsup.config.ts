@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   banner: { js: "#!/usr/bin/env node" },
-  noExternal: ["@toobit_agent/agent-toobitkit-core"],
+  noExternal: ["@delta_agent/agent-deltakit-core"],
 });

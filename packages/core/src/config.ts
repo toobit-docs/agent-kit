@@ -1,4 +1,4 @@
-import { DEFAULT_MODULES, MODULES, TOOBIT_API_BASE_URL, DEFAULT_SOURCE_TAG, type ModuleId } from "./constants.js";
+import { DEFAULT_MODULES, MODULES, DELTA_API_BASE_URL, DEFAULT_SOURCE_TAG, type ModuleId } from "./constants.js";
 import { ConfigError } from "./utils/errors.js";
 import { readTomlProfile } from "./config/toml.js";
 
@@ -10,7 +10,7 @@ export interface CliOptions {
   sourceTag?: string;
 }
 
-export interface ToobitConfig {
+export interface DeltaConfig {
   apiKey?: string;
   secretKey?: string;
   hasAuth: boolean;
@@ -57,14 +57,14 @@ function parseModuleList(rawModules?: string): ModuleId[] {
 
 /**
  * Credential priority:
- *   1. Environment variables (TOOBIT_API_KEY / TOOBIT_SECRET_KEY)
- *   2. ~/.toobit/config.toml — profile
+ *   1. Environment variables (DELTA_API_KEY / DELTA_SECRET_KEY)
+ *   2. ~/.delta/config.toml — profile
  */
-export function loadConfig(cli: CliOptions): ToobitConfig {
+export function loadConfig(cli: CliOptions): DeltaConfig {
   const toml = readTomlProfile(cli.profile);
 
-  const apiKey = process.env.TOOBIT_API_KEY?.trim() ?? toml.api_key;
-  const secretKey = process.env.TOOBIT_SECRET_KEY?.trim() ?? toml.secret_key;
+  const apiKey = process.env.DELTA_API_KEY?.trim() ?? toml.api_key;
+  const secretKey = process.env.DELTA_SECRET_KEY?.trim() ?? toml.secret_key;
 
   const hasAuth = Boolean(apiKey && secretKey);
   const partialAuth = Boolean(apiKey) || Boolean(secretKey);
@@ -72,27 +72,27 @@ export function loadConfig(cli: CliOptions): ToobitConfig {
   if (partialAuth && !hasAuth) {
     throw new ConfigError(
       "Partial API credentials detected.",
-      "Set TOOBIT_API_KEY and TOOBIT_SECRET_KEY together (env vars or config.toml profile).",
+      "Set DELTA_API_KEY and DELTA_SECRET_KEY together (env vars or config.toml profile).",
     );
   }
 
   const rawBaseUrl =
-    process.env.TOOBIT_API_BASE_URL?.trim() ?? toml.base_url ?? TOOBIT_API_BASE_URL;
+    process.env.DELTA_API_BASE_URL?.trim() ?? toml.base_url ?? DELTA_API_BASE_URL;
   if (!rawBaseUrl.startsWith("http://") && !rawBaseUrl.startsWith("https://")) {
     throw new ConfigError(
       `Invalid base URL "${rawBaseUrl}".`,
-      "TOOBIT_API_BASE_URL must start with http:// or https://",
+      "DELTA_API_BASE_URL must start with http:// or https://",
     );
   }
   const baseUrl = rawBaseUrl.replace(/\/+$/, "");
 
-  const rawTimeout = process.env.TOOBIT_TIMEOUT_MS
-    ? Number(process.env.TOOBIT_TIMEOUT_MS)
+  const rawTimeout = process.env.DELTA_TIMEOUT_MS
+    ? Number(process.env.DELTA_TIMEOUT_MS)
     : (toml.timeout_ms ?? 15_000);
   if (!Number.isFinite(rawTimeout) || rawTimeout <= 0) {
     throw new ConfigError(
       `Invalid timeout value "${rawTimeout}".`,
-      "Set TOOBIT_TIMEOUT_MS as a positive integer in milliseconds.",
+      "Set DELTA_TIMEOUT_MS as a positive integer in milliseconds.",
     );
   }
 
